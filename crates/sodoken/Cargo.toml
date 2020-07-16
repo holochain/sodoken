@@ -1,0 +1,21 @@
+[package]
+name = "sodoken"
+version = "0.1.0-alpha.1"
+authors = ["Holochain Core Dev Team <devcore@holochain.org>"]
+edition = "2018"
+description = "libsodium wrapper providing tokio safe memory secure api access."
+keywords = [ "holochain", "holo", "nacl", "libsodium", "cryptography" ]
+categories = [ "cryptography" ]
+license = "Apache-2.0"
+readme = "README.md"
+documentation = "https://docs.rs/sodoken"
+repository = "https://github.com/holochain/sodoken"
+
+[dependencies]
+libc = "0.2"
+libsodium-sys = "0.2.5"
+thiserror = "1"
+tokio = { version = "0.2", features = ["blocking", "rt-core", "rt-util", "rt-threaded"] }
+
+[dev-dependencies]
+tokio = { version = "0.2", features = ["full"] }
