@@ -16,7 +16,11 @@ pub async fn sign_seed_keypair(
         let mut pub_key = pub_key.write_lock();
         let mut sec_key = sec_key.write_lock();
         let seed = seed.read_lock();
-        let r = safe::sodium::crypto_sign_seed_keypair(&mut pub_key, &mut sec_key, &seed);
+        let r = safe::sodium::crypto_sign_seed_keypair(
+            &mut pub_key,
+            &mut sec_key,
+            &seed,
+        );
         let _ = s.send(r);
     });
     r.await.expect("threadpool task shutdown prematurely")
@@ -53,7 +57,11 @@ pub async fn sign_detached(
         let mut signature = signature.write_lock();
         let message = message.read_lock();
         let sec_key = sec_key.read_lock();
-        let r = safe::sodium::crypto_sign_detached(&mut signature, &message, &sec_key);
+        let r = safe::sodium::crypto_sign_detached(
+            &mut signature,
+            &message,
+            &sec_key,
+        );
         let _ = s.send(r);
     });
     r.await.expect("threadpool task shutdown prematurely")
@@ -73,7 +81,9 @@ pub async fn sign_verify_detached(
         let signature = signature.read_lock();
         let message = message.read_lock();
         let pub_key = pub_key.read_lock();
-        let r = safe::sodium::crypto_sign_verify_detached(&signature, &message, &pub_key);
+        let r = safe::sodium::crypto_sign_verify_detached(
+            &signature, &message, &pub_key,
+        );
         let _ = s.send(r);
     });
     r.await.expect("threadpool task shutdown prematurely")

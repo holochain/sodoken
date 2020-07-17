@@ -4,9 +4,7 @@ use std::{
     convert::{AsMut, AsRef},
     fmt::{Debug, Formatter},
     ops::{Deref, DerefMut},
-    sync::{
-        Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
-    },
+    sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
 /// Indicates we can dereference an item as a readable byte array.

@@ -57,8 +57,8 @@ pub(crate) mod safe;
 mod buffer;
 pub use buffer::*;
 
-pub mod random;
 pub mod hash;
+pub mod random;
 pub mod sign;
 
 #[cfg(test)]

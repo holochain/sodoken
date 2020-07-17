@@ -3,7 +3,7 @@
 use crate::*;
 
 /// Fill a buffer with cryptographically secure randomness
-pub async fn randombytes_buf(buf: &mut Buffer) {
+pub async fn randombytes_buf(buf: &mut Buffer) -> SodokenResult<()> {
     let buf = buf.clone(); // cheap refcount clone
     let (s, r) = tokio::sync::oneshot::channel();
     RAYON_POOL.spawn(move || {

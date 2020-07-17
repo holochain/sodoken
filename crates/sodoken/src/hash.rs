@@ -10,7 +10,7 @@ pub async fn generichash(
 ) -> SodokenResult<()> {
     let hash = hash.clone();
     let message = message.clone();
-    let key = key.map(|k| k.clone());
+    let key = key.cloned();
     let (s, r) = tokio::sync::oneshot::channel();
     RAYON_POOL.spawn(move || {
         let mut hash = hash.write_lock();
@@ -18,11 +18,13 @@ pub async fn generichash(
         let r = match key {
             Some(key) => {
                 let key = key.read_lock();
-                safe::sodium::crypto_generichash(&mut hash, &message, Some(&key))
+                safe::sodium::crypto_generichash(
+                    &mut hash,
+                    &message,
+                    Some(&key),
+                )
             }
-            None => {
-                safe::sodium::crypto_generichash(&mut hash, &message, None)
-            }
+            None => safe::sodium::crypto_generichash(&mut hash, &message, None),
         };
         let _ = s.send(r);
     });

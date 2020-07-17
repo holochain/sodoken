@@ -47,7 +47,7 @@ pub(crate) fn sodium_init() -> SodokenResult<()> {
     Err(SodokenError::InternalSodium)
 }
 
-pub(crate) fn randombytes_buf(buf: &mut [u8]) {
+pub(crate) fn randombytes_buf(buf: &mut [u8]) -> SodokenResult<()> {
     // randombytes_buf doesn't return anything and only acts on an already
     // allocated buffer - there are no error conditions possible here.
     //
@@ -56,6 +56,7 @@ pub(crate) fn randombytes_buf(buf: &mut [u8]) {
     assert!(*SODIUM_INIT);
     unsafe {
         libsodium_sys::randombytes_buf(raw_ptr_void!(buf), buf.len());
+        Ok(())
     }
 }
 
