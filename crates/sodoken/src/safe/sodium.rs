@@ -24,14 +24,12 @@ macro_rules! raw_ptr_char_immut {
     };
 }
 
-/*
 /// make invoking ffi functions more readable
 macro_rules! raw_ptr_ichar_immut {
     ($name: ident) => {
         $name.as_ptr() as *const libc::c_char
     };
 }
-*/
 
 pub(crate) fn sodium_init() -> SodokenResult<()> {
     // sodium_init will return < 0 if an allocation / threading error occurs
@@ -102,6 +100,64 @@ pub(crate) fn crypto_generichash(
             message.len() as libc::c_ulonglong,
             key,
             key_len,
+        ) == 0 as libc::c_int
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
+pub(crate) fn crypto_pwhash_argon2id(
+    hash: &mut [u8],
+    passphrase: &[u8],
+    salt: &[u8],
+    ops_limit: u64,
+    mem_limit: usize,
+) -> SodokenResult<()> {
+    if hash.len() < libsodium_sys::crypto_pwhash_argon2id_BYTES_MIN as usize {
+        return Err(SodokenError::BadHashSize);
+    }
+
+    if salt.len() != libsodium_sys::crypto_pwhash_argon2id_SALTBYTES as usize {
+        return Err(SodokenError::BadSaltSize);
+    }
+
+    if passphrase.len()
+        < libsodium_sys::crypto_pwhash_argon2id_PASSWD_MIN as usize
+        || passphrase.len()
+            > libsodium_sys::crypto_pwhash_argon2id_PASSWD_MAX as usize
+    {
+        return Err(SodokenError::BadPassphraseSize);
+    }
+
+    if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u64
+        || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u64
+    {
+        return Err(SodokenError::BadOpsLimit);
+    }
+
+    if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as usize {
+        return Err(SodokenError::BadMemLimit);
+    }
+
+    // crypto_pwhash can error lots of bad sizes
+    // we check sizes above for more detailed errors
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sizes - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_pwhash(
+            raw_ptr_char!(hash),
+            hash.len() as libc::c_ulonglong,
+            raw_ptr_ichar_immut!(passphrase),
+            passphrase.len() as libc::c_ulonglong,
+            raw_ptr_char_immut!(salt),
+            ops_limit,
+            mem_limit,
+            libsodium_sys::crypto_pwhash_argon2id_ALG_ARGON2ID13 as libc::c_int,
         ) == 0 as libc::c_int
         {
             return Ok(());

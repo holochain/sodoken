@@ -10,6 +10,10 @@ pub enum SodokenError {
     #[error("BadHashSize")]
     BadHashSize,
 
+    /// the salt size for this call didn't fall within constraints
+    #[error("BadSaltSize")]
+    BadSaltSize,
+
     /// the key size for this call didn't fall within constraints
     #[error("BadKeySize")]
     BadKeySize,
@@ -29,6 +33,18 @@ pub enum SodokenError {
     /// improper size for seed
     #[error("BadSeedSize")]
     BadSeedSize,
+
+    /// the passphrase size for this call didn't fall within constraints
+    #[error("BadPassphraseSize")]
+    BadPassphraseSize,
+
+    /// the ops limit for this call didn't fall within constraints
+    #[error("BadOpsLimit")]
+    BadOpsLimit,
+
+    /// the mem limit for this call didn't fall within constraints
+    #[error("BadMemLimit")]
+    BadMemLimit,
 
     /// bad bounds for write operation
     #[error("WriteOverflow")]

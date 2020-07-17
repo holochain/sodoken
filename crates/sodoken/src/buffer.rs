@@ -1,10 +1,13 @@
 use crate::*;
+use parking_lot::{
+    Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
+};
 use std::{
     borrow::{Borrow, BorrowMut},
     convert::{AsMut, AsRef},
     fmt::{Debug, Formatter},
     ops::{Deref, DerefMut},
-    sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::Arc,
 };
 
 /// Indicates we can dereference an item as a readable byte array.
@@ -123,7 +126,7 @@ impl From<Box<[u8]>> for Buffer {
         }
         impl AsBuffer for XX {
             fn deep_clone(&self) -> SodokenResult<Buffer> {
-                let g = self.0.read().unwrap();
+                let g = self.0.read();
                 let g = g.deref();
                 let out = g.clone();
                 Ok(Buffer(Arc::new(XX(RwLock::new(out)))))
@@ -148,7 +151,7 @@ impl From<Box<[u8]>> for Buffer {
                     }
                 }
                 impl<'a> AsRead<'a> for XX<'a> {}
-                let x = Box::new(XX(self.0.read().unwrap()));
+                let x = Box::new(XX(self.0.read()));
                 ReadGuard(x)
             }
 
@@ -187,7 +190,7 @@ impl From<Box<[u8]>> for Buffer {
                 }
                 impl<'a> AsRead<'a> for XX<'a> {}
                 impl<'a> AsWrite<'a> for XX<'a> {}
-                let x = Box::new(XX(self.0.write().unwrap()));
+                let x = Box::new(XX(self.0.write()));
                 WriteGuard(x)
             }
         }
@@ -253,7 +256,7 @@ fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
     }
     impl AsBuffer for XX {
         fn deep_clone(&self) -> SodokenResult<Buffer> {
-            let g = self.0.lock().unwrap();
+            let g = self.0.lock();
             let g = g.deref();
             let mut out = safe::s3buf::S3Buf::new(g.s)?;
             g.set_readable();
@@ -288,7 +291,7 @@ fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
                 }
             }
             impl<'a> AsRead<'a> for XX<'a> {}
-            let g = self.0.lock().unwrap();
+            let g = self.0.lock();
             g.set_readable();
             ReadGuard(Box::new(XX(g)))
         }
@@ -333,7 +336,7 @@ fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
             }
             impl<'a> AsRead<'a> for XX<'a> {}
             impl<'a> AsWrite<'a> for XX<'a> {}
-            let g = self.0.lock().unwrap();
+            let g = self.0.lock();
             g.set_writable();
             WriteGuard(Box::new(XX(g)))
         }
