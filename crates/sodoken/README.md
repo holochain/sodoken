@@ -3,4 +3,4 @@
 
 # sodoken
 
-sodoken
+lib SOdium + haDOKEN = SODOKEN!

@@ -38,10 +38,6 @@ pub enum SodokenError {
     #[error("InternalSodium")]
     InternalSodium,
 
-    /// error in tokio task
-    #[error(transparent)]
-    JoinError(#[from] tokio::task::JoinError),
-
     /// generic internal error
     #[error(transparent)]
     Other(Box<dyn std::error::Error + Send + Sync>),

@@ -53,8 +53,9 @@ impl S3Buf {
         //   - can error if it cannot allocate
         //
         // INVARIANTS:
-        //   - sodium_init() was called (enforced by plugin system)
+        //   - sodium_init() was called (enforced by SODIUM_INIT)
         //   - memory-aligned size
+        assert!(*SODIUM_INIT);
         let z = unsafe {
             // sodium_malloc requires memory-aligned sizes,
             // round up to the nearest 8 bytes.

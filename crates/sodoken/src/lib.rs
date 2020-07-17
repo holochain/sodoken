@@ -1,12 +1,27 @@
 #![deny(missing_docs)]
-//! sodoken
+//! lib SOdium + haDOKEN = SODOKEN!
 
+use once_cell::sync::Lazy;
 use std::{
     fmt::{Debug, Formatter},
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
+
+static SODIUM_INIT: Lazy<bool> = Lazy::new(|| {
+    safe::sodium::sodium_init().expect("can init libsodium");
+    true
+});
+
+static RAYON_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
+    rayon::ThreadPoolBuilder::new()
+        // give us some minimal ability to time-slice between
+        // multiple paralel operations on low cpu-count systems
+        .num_threads(8)
+        .build()
+        .expect("failed to build sodoken rayon thread pool")
+});
 
 /// Until async traits are supported, we need to erase the type of future
 /// in "async" trait methods.
@@ -41,6 +56,10 @@ pub(crate) mod safe;
 
 mod buffer;
 pub use buffer::*;
+
+pub mod random;
+pub mod hash;
+pub mod sign;
 
 #[cfg(test)]
 mod tests {
