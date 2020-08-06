@@ -4,3 +4,5 @@
 # sodoken
 
 lib SOdium + haDOKEN = SODOKEN!
+
+libsodium wrapper providing tokio safe memory secure api access.

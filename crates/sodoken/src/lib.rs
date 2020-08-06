@@ -1,6 +1,8 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 //! lib SOdium + haDOKEN = SODOKEN!
+//!
+//! libsodium wrapper providing tokio safe memory secure api access.
 
 use once_cell::sync::Lazy;
 /*
