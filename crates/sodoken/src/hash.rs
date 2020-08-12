@@ -27,11 +27,10 @@ pub async fn generichash(
     let hash = hash.clone();
     let message = message.clone();
     let key = key.cloned();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let mut hash = hash.write_lock();
         let message = message.read_lock();
-        let r = match key {
+        match key {
             Some(key) => {
                 let key = key.read_lock();
                 safe::sodium::crypto_generichash(
@@ -41,10 +40,9 @@ pub async fn generichash(
                 )
             }
             None => safe::sodium::crypto_generichash(&mut hash, &message, None),
-        };
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        }
+    })
+    .await
 }
 
 /// minimum hash length for argon2id pwhash
@@ -110,21 +108,19 @@ pub async fn pwhash_argon2id(
     let hash = hash.clone();
     let passphrase = passphrase.clone();
     let salt = salt.clone();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let mut hash = hash.write_lock();
         let passphrase = passphrase.read_lock();
         let salt = salt.read_lock();
-        let r = safe::sodium::crypto_pwhash_argon2id(
+        safe::sodium::crypto_pwhash_argon2id(
             &mut hash,
             &passphrase,
             &salt,
             ops_limit,
             mem_limit,
-        );
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        )
+    })
+    .await
 }
 
 #[cfg(test)]

@@ -25,19 +25,17 @@ pub async fn sign_seed_keypair(
     let pub_key = pub_key.clone();
     let sec_key = sec_key.clone();
     let seed = seed.clone();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let mut pub_key = pub_key.write_lock();
         let mut sec_key = sec_key.write_lock();
         let seed = seed.read_lock();
-        let r = safe::sodium::crypto_sign_seed_keypair(
+        safe::sodium::crypto_sign_seed_keypair(
             &mut pub_key,
             &mut sec_key,
             &seed,
-        );
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        )
+    })
+    .await
 }
 
 /// create an ed25519 signature keypair from entropy
@@ -47,14 +45,12 @@ pub async fn sign_keypair(
 ) -> SodokenResult<()> {
     let pub_key = pub_key.clone();
     let sec_key = sec_key.clone();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let mut pub_key = pub_key.write_lock();
         let mut sec_key = sec_key.write_lock();
-        let r = safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key);
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key)
+    })
+    .await
 }
 
 /// create a signature from a signature private key
@@ -66,19 +62,13 @@ pub async fn sign_detached(
     let signature = signature.clone();
     let message = message.clone();
     let sec_key = sec_key.clone();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let mut signature = signature.write_lock();
         let message = message.read_lock();
         let sec_key = sec_key.read_lock();
-        let r = safe::sodium::crypto_sign_detached(
-            &mut signature,
-            &message,
-            &sec_key,
-        );
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        safe::sodium::crypto_sign_detached(&mut signature, &message, &sec_key)
+    })
+    .await
 }
 
 /// create a signature from a signature private key
@@ -90,17 +80,15 @@ pub async fn sign_verify_detached(
     let signature = signature.clone();
     let message = message.clone();
     let pub_key = pub_key.clone();
-    let (s, r) = tokio::sync::oneshot::channel();
-    RAYON_POOL.spawn(move || {
+    rayon_exec(move || {
         let signature = signature.read_lock();
         let message = message.read_lock();
         let pub_key = pub_key.read_lock();
-        let r = safe::sodium::crypto_sign_verify_detached(
+        safe::sodium::crypto_sign_verify_detached(
             &signature, &message, &pub_key,
-        );
-        let _ = s.send(r);
-    });
-    r.await.expect("threadpool task shutdown prematurely")
+        )
+    })
+    .await
 }
 
 #[cfg(test)]
