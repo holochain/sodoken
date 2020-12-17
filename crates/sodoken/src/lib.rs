@@ -19,12 +19,3 @@ pub use buffer::*;
 pub mod hash;
 pub mod random;
 pub mod sign;
-
-#[cfg(test)]
-mod tests {
-    #[tokio::test(threaded_scheduler)]
-    async fn test_sanity() -> Result<(), ()> {
-        println!("yo");
-        Ok(())
-    }
-}
