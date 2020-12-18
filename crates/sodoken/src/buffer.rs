@@ -104,6 +104,14 @@ pub trait AsBuffer: 'static + Debug + Send + Sync {
 
     /// Obtain write access to the underlying buffer.
     fn write_lock(&self) -> WriteGuard<'_>;
+
+    /// Provided method to extract this instance into a boxed slice.
+    /// Be sure you are not exposing something that should be kept protected.
+    fn to_boxed_slice(&self) -> Box<[u8]> {
+        let r = self.read_lock();
+        let r: &[u8] = &*r;
+        <Box<[u8]>>::from(r)
+    }
 }
 
 /// Concrete newtype to abstract away dealing with the dynamic buffer type.
@@ -204,6 +212,16 @@ impl Buffer {
     /// for storing private keys and data.
     pub fn new(size: usize) -> Buffer {
         vec![0; size].into()
+    }
+
+    /// Create a new buffer instance using unlocked memory,
+    /// copying data from given reference.
+    /// There will not be a 'memlocked' version of this API as
+    /// that would encourage loading from sources that are already
+    /// insecurely exposed.
+    pub fn from_ref<R: AsRef<[u8]>>(r: R) -> Buffer {
+        let r: Box<[u8]> = r.as_ref().into();
+        r.into()
     }
 
     /// Create a new buffer instance using locked memory.
