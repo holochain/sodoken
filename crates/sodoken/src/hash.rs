@@ -127,7 +127,7 @@ pub async fn pwhash_argon2id(
 mod tests {
     use crate::*;
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn generichash() -> SodokenResult<()> {
         let msg: Buffer = b"test message".to_vec().into();
         let mut hash = Buffer::new(hash::GENERICHASH_BYTES_MIN);
@@ -139,7 +139,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn pwhash_argon2id() -> SodokenResult<()> {
         let pass: Buffer = b"my passphrase".to_vec().into();
         let salt: Buffer = vec![0xdb; hash::PWHASH_ARGON2ID_SALTBYTES].into();

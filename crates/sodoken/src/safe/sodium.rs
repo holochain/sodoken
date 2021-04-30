@@ -45,6 +45,7 @@ pub(crate) fn sodium_init() -> SodokenResult<()> {
     Err(SodokenError::InternalSodium)
 }
 
+#[allow(clippy::unnecessary_wraps)]
 pub(crate) fn randombytes_buf(buf: &mut [u8]) -> SodokenResult<()> {
     // randombytes_buf doesn't return anything and only acts on an already
     // allocated buffer - there are no error conditions possible here.
@@ -100,7 +101,7 @@ pub(crate) fn crypto_generichash(
             message.len() as libc::c_ulonglong,
             key,
             key_len,
-        ) == 0 as libc::c_int
+        ) == 0_i32
         {
             return Ok(());
         }
@@ -158,7 +159,7 @@ pub(crate) fn crypto_pwhash_argon2id(
             ops_limit,
             mem_limit,
             libsodium_sys::crypto_pwhash_argon2id_ALG_ARGON2ID13 as libc::c_int,
-        ) == 0 as libc::c_int
+        ) == 0_i32
         {
             return Ok(());
         }
@@ -196,7 +197,7 @@ pub(crate) fn crypto_sign_seed_keypair(
             raw_ptr_char!(pub_key),
             raw_ptr_char!(sec_key),
             raw_ptr_char_immut!(seed),
-        ) == 0 as libc::c_int
+        ) == 0_i32
         {
             return Ok(());
         }
@@ -227,7 +228,7 @@ pub(crate) fn crypto_sign_keypair(
         if libsodium_sys::crypto_sign_keypair(
             raw_ptr_char!(pub_key),
             raw_ptr_char!(sec_key),
-        ) == 0 as libc::c_int
+        ) == 0_i32
         {
             return Ok(());
         }
@@ -262,7 +263,7 @@ pub(crate) fn crypto_sign_detached(
             raw_ptr_char_immut!(message),
             message.len() as libc::c_ulonglong,
             raw_ptr_char_immut!(sec_key),
-        ) == 0 as libc::c_int
+        ) == 0_i32
         {
             return Ok(());
         }
@@ -296,6 +297,6 @@ pub(crate) fn crypto_sign_verify_detached(
             raw_ptr_char_immut!(message),
             message.len() as libc::c_ulonglong,
             raw_ptr_char_immut!(pub_key),
-        ) == 0 as libc::c_int)
+        ) == 0_i32)
     }
 }

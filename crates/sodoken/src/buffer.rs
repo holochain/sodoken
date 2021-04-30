@@ -126,83 +126,83 @@ impl From<Vec<u8>> for Buffer {
 
 impl From<Box<[u8]>> for Buffer {
     fn from(o: Box<[u8]>) -> Self {
-        struct XX(RwLock<Box<[u8]>>);
-        impl Debug for XX {
+        struct X(RwLock<Box<[u8]>>);
+        impl Debug for X {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 f.debug_struct("SodokenBuffer").finish()
             }
         }
-        impl AsBuffer for XX {
+        impl AsBuffer for X {
             fn deep_clone(&self) -> SodokenResult<Buffer> {
                 let g = self.0.read();
                 let g = g.deref();
                 let out = g.clone();
-                Ok(Buffer(Arc::new(XX(RwLock::new(out)))))
+                Ok(Buffer(Arc::new(X(RwLock::new(out)))))
             }
 
             fn read_lock(&self) -> ReadGuard<'_> {
-                struct XX<'a>(RwLockReadGuard<'a, Box<[u8]>>);
-                impl Deref for XX<'_> {
+                struct X<'a>(RwLockReadGuard<'a, Box<[u8]>>);
+                impl Deref for X<'_> {
                     type Target = [u8];
                     fn deref(&self) -> &Self::Target {
                         &self.0
                     }
                 }
-                impl AsRef<[u8]> for XX<'_> {
+                impl AsRef<[u8]> for X<'_> {
                     fn as_ref(&self) -> &[u8] {
                         &self.0
                     }
                 }
-                impl Borrow<[u8]> for XX<'_> {
+                impl Borrow<[u8]> for X<'_> {
                     fn borrow(&self) -> &[u8] {
                         &self.0
                     }
                 }
-                impl<'a> AsRead<'a> for XX<'a> {}
-                let x = Box::new(XX(self.0.read()));
+                impl<'a> AsRead<'a> for X<'a> {}
+                let x = Box::new(X(self.0.read()));
                 ReadGuard(x)
             }
 
             fn write_lock(&self) -> WriteGuard<'_> {
-                struct XX<'a>(RwLockWriteGuard<'a, Box<[u8]>>);
-                impl Deref for XX<'_> {
+                struct X<'a>(RwLockWriteGuard<'a, Box<[u8]>>);
+                impl Deref for X<'_> {
                     type Target = [u8];
                     fn deref(&self) -> &Self::Target {
                         &self.0
                     }
                 }
-                impl DerefMut for XX<'_> {
+                impl DerefMut for X<'_> {
                     fn deref_mut(&mut self) -> &mut Self::Target {
                         &mut self.0
                     }
                 }
-                impl AsRef<[u8]> for XX<'_> {
+                impl AsRef<[u8]> for X<'_> {
                     fn as_ref(&self) -> &[u8] {
                         &self.0
                     }
                 }
-                impl AsMut<[u8]> for XX<'_> {
+                impl AsMut<[u8]> for X<'_> {
                     fn as_mut(&mut self) -> &mut [u8] {
                         &mut self.0
                     }
                 }
-                impl Borrow<[u8]> for XX<'_> {
+                impl Borrow<[u8]> for X<'_> {
                     fn borrow(&self) -> &[u8] {
                         &self.0
                     }
                 }
-                impl BorrowMut<[u8]> for XX<'_> {
+                impl BorrowMut<[u8]> for X<'_> {
                     fn borrow_mut(&mut self) -> &mut [u8] {
                         &mut self.0
                     }
                 }
-                impl<'a> AsRead<'a> for XX<'a> {}
-                impl<'a> AsWrite<'a> for XX<'a> {}
-                let x = Box::new(XX(self.0.write()));
+                impl<'a> AsRead<'a> for X<'a> {}
+                impl<'a> AsWrite<'a> for X<'a> {}
+                let x = Box::new(X(self.0.write()));
                 WriteGuard(x)
             }
         }
-        Buffer(Arc::new(XX(RwLock::new(o))))
+        Buffer(Arc::new(X(RwLock::new(o))))
     }
 }
 
@@ -266,13 +266,13 @@ impl AsBuffer for Buffer {
 }
 
 fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
-    struct XX(Mutex<safe::s3buf::S3Buf>);
-    impl Debug for XX {
+    struct X(Mutex<safe::s3buf::S3Buf>);
+    impl Debug for X {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("SodokenBufferMemlocked").finish()
         }
     }
-    impl AsBuffer for XX {
+    impl AsBuffer for X {
         fn deep_clone(&self) -> SodokenResult<Buffer> {
             let g = self.0.lock();
             let g = g.deref();
@@ -282,84 +282,84 @@ fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
             out.deref_mut().copy_from_slice(g.deref());
             g.set_no_access();
             out.set_no_access();
-            Ok(Buffer(Arc::new(XX(Mutex::new(out)))))
+            Ok(Buffer(Arc::new(X(Mutex::new(out)))))
         }
 
         fn read_lock(&self) -> ReadGuard<'_> {
-            struct XX<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
-            impl Drop for XX<'_> {
+            struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
+            impl Drop for X<'_> {
                 fn drop(&mut self) {
                     self.0.set_no_access();
                 }
             }
-            impl Deref for XX<'_> {
+            impl Deref for X<'_> {
                 type Target = [u8];
                 fn deref(&self) -> &Self::Target {
                     &self.0
                 }
             }
-            impl AsRef<[u8]> for XX<'_> {
+            impl AsRef<[u8]> for X<'_> {
                 fn as_ref(&self) -> &[u8] {
                     &self.0
                 }
             }
-            impl Borrow<[u8]> for XX<'_> {
+            impl Borrow<[u8]> for X<'_> {
                 fn borrow(&self) -> &[u8] {
                     &self.0
                 }
             }
-            impl<'a> AsRead<'a> for XX<'a> {}
+            impl<'a> AsRead<'a> for X<'a> {}
             let g = self.0.lock();
             g.set_readable();
-            ReadGuard(Box::new(XX(g)))
+            ReadGuard(Box::new(X(g)))
         }
 
         fn write_lock(&self) -> WriteGuard<'_> {
-            struct XX<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
-            impl Drop for XX<'_> {
+            struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
+            impl Drop for X<'_> {
                 fn drop(&mut self) {
                     self.0.set_no_access();
                 }
             }
-            impl Deref for XX<'_> {
+            impl Deref for X<'_> {
                 type Target = [u8];
                 fn deref(&self) -> &Self::Target {
                     &self.0
                 }
             }
-            impl DerefMut for XX<'_> {
+            impl DerefMut for X<'_> {
                 fn deref_mut(&mut self) -> &mut Self::Target {
                     &mut self.0
                 }
             }
-            impl AsRef<[u8]> for XX<'_> {
+            impl AsRef<[u8]> for X<'_> {
                 fn as_ref(&self) -> &[u8] {
                     &self.0
                 }
             }
-            impl AsMut<[u8]> for XX<'_> {
+            impl AsMut<[u8]> for X<'_> {
                 fn as_mut(&mut self) -> &mut [u8] {
                     &mut self.0
                 }
             }
-            impl Borrow<[u8]> for XX<'_> {
+            impl Borrow<[u8]> for X<'_> {
                 fn borrow(&self) -> &[u8] {
                     &self.0
                 }
             }
-            impl BorrowMut<[u8]> for XX<'_> {
+            impl BorrowMut<[u8]> for X<'_> {
                 fn borrow_mut(&mut self) -> &mut [u8] {
                     &mut self.0
                 }
             }
-            impl<'a> AsRead<'a> for XX<'a> {}
-            impl<'a> AsWrite<'a> for XX<'a> {}
+            impl<'a> AsRead<'a> for X<'a> {}
+            impl<'a> AsWrite<'a> for X<'a> {}
             let g = self.0.lock();
             g.set_writable();
-            WriteGuard(Box::new(XX(g)))
+            WriteGuard(Box::new(X(g)))
         }
     }
-    Ok(Buffer(Arc::new(XX(Mutex::new(safe::s3buf::S3Buf::new(
+    Ok(Buffer(Arc::new(X(Mutex::new(safe::s3buf::S3Buf::new(
         size,
     )?)))))
 }
