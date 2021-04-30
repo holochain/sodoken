@@ -18,12 +18,15 @@ jobs:
           #nightly,
         ]
     steps:
-      - uses: actions/checkout@v2
+      - name: checkout
+        uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
+      - name: toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.toolchain }}
 
-      - uses: actions-rs/cargo@v1
+      - name: cargo test
+        uses: actions-rs/cargo@v1
         with:
           command: test
