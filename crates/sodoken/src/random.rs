@@ -16,7 +16,7 @@ pub async fn randombytes_buf(buf: &mut Buffer) -> SodokenResult<()> {
 mod tests {
     use crate::*;
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn randombytes_buf() -> SodokenResult<()> {
         let e = Buffer::new(32);
         let mut b = e.deep_clone().unwrap();

@@ -95,7 +95,7 @@ pub async fn sign_verify_detached(
 mod tests {
     use crate::*;
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn sign() -> SodokenResult<()> {
         let mut pub_ = Buffer::new(sign::SIGN_PUBLICKEYBYTES);
         let mut sec = Buffer::new(sign::SIGN_SECRETKEYBYTES);
@@ -117,7 +117,7 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test(flavor = "multi_thread")]
     async fn sign_seed() -> SodokenResult<()> {
         let seed: Buffer = vec![0xdb; sign::SIGN_SEEDBYTES].into();
         let mut pub_ = Buffer::new(sign::SIGN_PUBLICKEYBYTES);
