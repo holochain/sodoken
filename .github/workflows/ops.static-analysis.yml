@@ -6,13 +6,13 @@ jobs:
   static-analysis:
     runs-on: ${{ matrix.os }}
     strategy:
-    matrix:
-      os: [
-        ubuntu-latest,
-      ]
-      toolchain: [
-        stable,
-      ]
+      matrix:
+        os: [
+          ubuntu-latest,
+        ]
+        toolchain: [
+          stable,
+        ]
     steps:
       - uses: actions/checkout@v2
 
