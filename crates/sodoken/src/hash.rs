@@ -19,15 +19,17 @@ pub const GENERICHASH_KEYBYTES_MAX: usize =
     libsodium_sys::crypto_generichash_BYTES_MAX as usize;
 
 /// blake2b hashing scheme
-pub async fn generichash(
-    hash: &mut Buffer,
-    message: &Buffer,
-    key: Option<&Buffer>,
-) -> SodokenResult<()> {
-    let hash = hash.clone();
-    let message = message.clone();
-    let key = key.cloned();
-    rayon_exec(move || {
+async fn generichash_inner<H, M, K>(
+    hash: H,
+    message: M,
+    key: Option<K>,
+) -> SodokenResult<()>
+where
+    H: AsBufWrite,
+    M: AsBufRead,
+    K: AsBufRead,
+{
+    tokio_exec(move || {
         let mut hash = hash.write_lock();
         let message = message.read_lock();
         match key {
@@ -43,6 +45,29 @@ pub async fn generichash(
         }
     })
     .await
+}
+
+/// blake2b hashing scheme
+pub async fn generichash_with_key<H, M, K>(
+    hash: H,
+    message: M,
+    key: K,
+) -> SodokenResult<()>
+where
+    H: AsBufWrite,
+    M: AsBufRead,
+    K: AsBufRead,
+{
+    generichash_inner(hash, message, Some(key)).await
+}
+
+/// blake2b hashing scheme
+pub async fn generichash<H, M>(hash: H, message: M) -> SodokenResult<()>
+where
+    H: AsBufWrite,
+    M: AsBufRead,
+{
+    generichash_inner::<H, M, BufRead>(hash, message, None).await
 }
 
 /// minimum hash length for argon2id pwhash
@@ -98,17 +123,19 @@ pub const PWHASH_ARGON2ID_MEMLIMIT_SENSITIVE: usize =
     libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE as usize;
 
 /// argon2id13 password hashing scheme
-pub async fn pwhash_argon2id(
-    hash: &mut Buffer,
-    passphrase: &Buffer,
-    salt: &Buffer,
+pub async fn pwhash_argon2id<H, P, S>(
+    hash: H,
+    passphrase: P,
+    salt: S,
     ops_limit: u64,
     mem_limit: usize,
-) -> SodokenResult<()> {
-    let hash = hash.clone();
-    let passphrase = passphrase.clone();
-    let salt = salt.clone();
-    rayon_exec(move || {
+) -> SodokenResult<()>
+where
+    H: AsBufWrite,
+    P: AsBufRead,
+    S: AsBufRead,
+{
+    tokio_exec(move || {
         let mut hash = hash.write_lock();
         let passphrase = passphrase.read_lock();
         let salt = salt.read_lock();
@@ -126,28 +153,49 @@ pub async fn pwhash_argon2id(
 #[cfg(test)]
 mod tests {
     use crate::*;
+    use std::sync::Arc;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn generichash() -> SodokenResult<()> {
-        let msg: Buffer = b"test message".to_vec().into();
-        let mut hash = Buffer::new(hash::GENERICHASH_BYTES_MIN);
-        hash::generichash(&mut hash, &msg, None).await?;
+        let msg = BufRead::new_no_lock(b"test message");
+        let hash = BufWrite::new_no_lock(hash::GENERICHASH_BYTES_MIN);
+        hash::generichash(hash.clone(), msg.clone()).await?;
         assert_eq!(
             "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
             format!("{:?}", &*hash.read_lock()),
         );
+
+        // also check that a trait-object works
+        let msg2 = msg.clone();
+        let msg2: Box<dyn AsBufRead> = Box::new(msg2);
+        hash::generichash(hash.clone(), msg2).await?;
+        assert_eq!(
+            "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
+            format!("{:?}", &*hash.read_lock()),
+        );
+
+        // also check that arc trait-object works
+        let msg3 = msg.clone();
+        let msg3: Arc<dyn AsBufRead> = Arc::new(msg3);
+        hash::generichash(hash.clone(), msg3).await?;
+        assert_eq!(
+            "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
+            format!("{:?}", &*hash.read_lock()),
+        );
+
         Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn pwhash_argon2id() -> SodokenResult<()> {
-        let pass: Buffer = b"my passphrase".to_vec().into();
-        let salt: Buffer = vec![0xdb; hash::PWHASH_ARGON2ID_SALTBYTES].into();
-        let mut hash = Buffer::new(hash::PWHASH_ARGON2ID_BYTES_MIN);
+        let pass = BufRead::new_no_lock(b"my passphrase");
+        let salt =
+            BufRead::new_no_lock(&[0xdb; hash::PWHASH_ARGON2ID_SALTBYTES]);
+        let hash = BufWrite::new_no_lock(hash::PWHASH_ARGON2ID_BYTES_MIN);
         hash::pwhash_argon2id(
-            &mut hash,
-            &pass,
-            &salt,
+            hash.clone(),
+            pass,
+            salt,
             hash::PWHASH_ARGON2ID_OPSLIMIT_INTERACTIVE,
             hash::PWHASH_ARGON2ID_MEMLIMIT_INTERACTIVE,
         )

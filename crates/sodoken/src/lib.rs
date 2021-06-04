@@ -6,7 +6,7 @@
 
 mod statics;
 use statics::SODIUM_INIT;
-pub use statics::*;
+pub(crate) use statics::*;
 
 mod error;
 pub use error::*;
