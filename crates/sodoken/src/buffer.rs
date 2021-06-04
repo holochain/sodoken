@@ -91,275 +91,418 @@ impl BorrowMut<[u8]> for WriteGuard<'_> {
 impl<'a> AsRead<'a> for WriteGuard<'a> {}
 impl<'a> AsWrite<'a> for WriteGuard<'a> {}
 
-/// A buffer represents an array of bytes that may or may not be memory locked.
-pub trait AsBuffer: 'static + Debug + Send + Sync {
-    /// Deep clone the actual bytes of this buffer.
-    /// The type (memlocked or not) will be retained.
-    /// Not to be confused with "clone" on the Buffer struct,
-    /// which just bumps a refcount.
-    fn deep_clone(&self) -> SodokenResult<Buffer>;
-
+/// A readable buffer that may or may not be memlocked.
+pub trait AsBufRead: 'static + Debug + Send + Sync {
     /// Obtain read access to the underlying buffer.
     fn read_lock(&self) -> ReadGuard<'_>;
+}
 
+impl<T: AsBufRead + ?Sized> AsBufRead for Box<T> {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        AsBufRead::read_lock(&**self)
+    }
+}
+
+impl<T: AsBufRead + ?Sized> AsBufRead for Arc<T> {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        AsBufRead::read_lock(&**self)
+    }
+}
+
+/// A writable buffer that may or may not be memlocked.
+pub trait AsBufWrite: AsBufRead {
     /// Obtain write access to the underlying buffer.
     fn write_lock(&self) -> WriteGuard<'_>;
 
-    /// Provided method to extract this instance into a boxed slice.
-    /// Be sure you are not exposing something that should be kept protected.
-    fn to_boxed_slice(&self) -> Box<[u8]> {
-        let r = self.read_lock();
-        let r: &[u8] = &*r;
-        <Box<[u8]>>::from(r)
+    /// Downgrade this to a read-only reference
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    fn read_only(&self) -> BufRead;
+}
+
+impl<T: AsBufWrite + ?Sized> AsBufWrite for Box<T> {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        AsBufWrite::write_lock(&**self)
+    }
+
+    fn read_only(&self) -> BufRead {
+        AsBufWrite::read_only(&**self)
     }
 }
 
-/// Concrete newtype to abstract away dealing with the dynamic buffer type.
+impl<T: AsBufWrite + ?Sized> AsBufWrite for Arc<T> {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        AsBufWrite::write_lock(&**self)
+    }
+
+    fn read_only(&self) -> BufRead {
+        AsBufWrite::read_only(&**self)
+    }
+}
+
+/// This concrete read-only buffer type is NOT memlocked.
+pub type BufReadNoLock = Arc<[u8]>;
+
+impl AsBufRead for BufReadNoLock {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        struct X<'a>(&'a [u8]);
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        let x = Box::new(X(&*self));
+        ReadGuard(x)
+    }
+}
+
+/// Construct a new read-only buffer that is NOT memlocked.
+pub fn new_buf_read_no_lock(content: &[u8]) -> BufReadNoLock {
+    let buf: Box<[u8]> = content.to_vec().into_boxed_slice();
+    buf.into()
+}
+
+/// This concrete writable buffer type is NOT memlocked.
+pub type BufWriteNoLock = Arc<RwLock<Box<[u8]>>>;
+
+/// Construct a new writable buffer that is NOT memlocked.
+pub fn new_buf_write_no_lock(size: usize) -> BufWriteNoLock {
+    let buf: Box<[u8]> = vec![0; size].into_boxed_slice();
+    Arc::new(RwLock::new(buf))
+}
+
+impl AsBufRead for BufWriteNoLock {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        struct X<'a>(RwLockReadGuard<'a, Box<[u8]>>);
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        let x = Box::new(X(self.read()));
+        ReadGuard(x)
+    }
+}
+
+impl AsBufWrite for BufWriteNoLock {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        struct X<'a>(RwLockWriteGuard<'a, Box<[u8]>>);
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl DerefMut for X<'_> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl AsMut<[u8]> for X<'_> {
+            fn as_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl BorrowMut<[u8]> for X<'_> {
+            fn borrow_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        impl<'a> AsWrite<'a> for X<'a> {}
+        let x = Box::new(X(self.write()));
+        WriteGuard(x)
+    }
+
+    fn read_only(&self) -> BufRead {
+        BufRead(BufReadInner::NoLockDowngrade(self.clone()))
+    }
+}
+
+/// This read-only buffer type is memlocked.
+/// Use this for passwords / private keys, etc, but NOT everything,
+/// locked memory is a finite resource.
+#[derive(Clone)]
+pub struct BufReadMemlocked(Arc<Mutex<safe::s3buf::S3Buf>>);
+
+impl Debug for BufReadMemlocked {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BufReadMemlocked").finish()
+    }
+}
+
+impl AsBufRead for BufReadMemlocked {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
+        impl Drop for X<'_> {
+            fn drop(&mut self) {
+                self.0.set_no_access();
+            }
+        }
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        let g = self.0.lock();
+        g.set_readable();
+        ReadGuard(Box::new(X(g)))
+    }
+}
+
+/// This writable buffer type is memlocked.
+/// Use this for passwords / private keys, etc, but NOT everything,
+/// locked memory is a finite resource.
+#[derive(Clone)]
+pub struct BufWriteMemlocked(Arc<Mutex<safe::s3buf::S3Buf>>);
+
+impl BufWriteMemlocked {
+    /// Construct a new writable, memlocked buffer.
+    /// Use this for passwords / private keys, etc, but NOT everything,
+    /// locked memory is a finite resource.
+    pub fn new(size: usize) -> SodokenResult<Self> {
+        Ok(Self(Arc::new(Mutex::new(safe::s3buf::S3Buf::new(size)?))))
+    }
+
+    /// Get a read-only, memlocked reference to this buffer.
+    pub fn read_only(&self) -> BufReadMemlocked {
+        BufReadMemlocked(self.0.clone())
+    }
+}
+
+impl Debug for BufWriteMemlocked {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BufWriteMemlocked").finish()
+    }
+}
+
+impl AsBufRead for BufWriteMemlocked {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
+        impl Drop for X<'_> {
+            fn drop(&mut self) {
+                self.0.set_no_access();
+            }
+        }
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        let g = self.0.lock();
+        g.set_readable();
+        ReadGuard(Box::new(X(g)))
+    }
+}
+
+impl AsBufWrite for BufWriteMemlocked {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
+        impl Drop for X<'_> {
+            fn drop(&mut self) {
+                self.0.set_no_access();
+            }
+        }
+        impl Deref for X<'_> {
+            type Target = [u8];
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl DerefMut for X<'_> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+        impl AsRef<[u8]> for X<'_> {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl AsMut<[u8]> for X<'_> {
+            fn as_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+        impl Borrow<[u8]> for X<'_> {
+            fn borrow(&self) -> &[u8] {
+                &self.0
+            }
+        }
+        impl BorrowMut<[u8]> for X<'_> {
+            fn borrow_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+        impl<'a> AsRead<'a> for X<'a> {}
+        impl<'a> AsWrite<'a> for X<'a> {}
+        let g = self.0.lock();
+        g.set_writable();
+        WriteGuard(Box::new(X(g)))
+    }
+
+    fn read_only(&self) -> BufRead {
+        BufRead(BufReadInner::MemlockedDowngrade(self.clone()))
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct Buffer(pub Arc<dyn 'static + AsBuffer>);
-
-impl From<Vec<u8>> for Buffer {
-    fn from(o: Vec<u8>) -> Self {
-        o.into_boxed_slice().into()
-    }
+enum BufReadInner {
+    NoLock(BufReadNoLock),
+    NoLockDowngrade(BufWriteNoLock),
+    //Memlocked(BufReadMemlocked),
+    MemlockedDowngrade(BufWriteMemlocked),
 }
 
-impl From<Box<[u8]>> for Buffer {
-    fn from(o: Box<[u8]>) -> Self {
-        struct X(RwLock<Box<[u8]>>);
-        impl Debug for X {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.debug_struct("SodokenBuffer").finish()
-            }
+impl AsBufRead for BufReadInner {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        match self {
+            Self::NoLock(b) => b.read_lock(),
+            Self::NoLockDowngrade(b) => b.read_lock(),
+            //Self::Memlocked(b) => b.read_lock(),
+            Self::MemlockedDowngrade(b) => b.read_lock(),
         }
-        impl AsBuffer for X {
-            fn deep_clone(&self) -> SodokenResult<Buffer> {
-                let g = self.0.read();
-                let g = g.deref();
-                let out = g.clone();
-                Ok(Buffer(Arc::new(X(RwLock::new(out)))))
-            }
-
-            fn read_lock(&self) -> ReadGuard<'_> {
-                struct X<'a>(RwLockReadGuard<'a, Box<[u8]>>);
-                impl Deref for X<'_> {
-                    type Target = [u8];
-                    fn deref(&self) -> &Self::Target {
-                        &self.0
-                    }
-                }
-                impl AsRef<[u8]> for X<'_> {
-                    fn as_ref(&self) -> &[u8] {
-                        &self.0
-                    }
-                }
-                impl Borrow<[u8]> for X<'_> {
-                    fn borrow(&self) -> &[u8] {
-                        &self.0
-                    }
-                }
-                impl<'a> AsRead<'a> for X<'a> {}
-                let x = Box::new(X(self.0.read()));
-                ReadGuard(x)
-            }
-
-            fn write_lock(&self) -> WriteGuard<'_> {
-                struct X<'a>(RwLockWriteGuard<'a, Box<[u8]>>);
-                impl Deref for X<'_> {
-                    type Target = [u8];
-                    fn deref(&self) -> &Self::Target {
-                        &self.0
-                    }
-                }
-                impl DerefMut for X<'_> {
-                    fn deref_mut(&mut self) -> &mut Self::Target {
-                        &mut self.0
-                    }
-                }
-                impl AsRef<[u8]> for X<'_> {
-                    fn as_ref(&self) -> &[u8] {
-                        &self.0
-                    }
-                }
-                impl AsMut<[u8]> for X<'_> {
-                    fn as_mut(&mut self) -> &mut [u8] {
-                        &mut self.0
-                    }
-                }
-                impl Borrow<[u8]> for X<'_> {
-                    fn borrow(&self) -> &[u8] {
-                        &self.0
-                    }
-                }
-                impl BorrowMut<[u8]> for X<'_> {
-                    fn borrow_mut(&mut self) -> &mut [u8] {
-                        &mut self.0
-                    }
-                }
-                impl<'a> AsRead<'a> for X<'a> {}
-                impl<'a> AsWrite<'a> for X<'a> {}
-                let x = Box::new(X(self.0.write()));
-                WriteGuard(x)
-            }
-        }
-        Buffer(Arc::new(X(RwLock::new(o))))
     }
 }
 
-impl Buffer {
-    /// Create a new buffer instance using unlocked memory.
-    /// No protection will be added, you should consider `buffer_new_memlocked`
-    /// for storing private keys and data.
-    pub fn new(size: usize) -> Buffer {
-        vec![0; size].into()
-    }
+/// A concrete read-only buffer type that may or may not be memlocked.
+#[derive(Debug, Clone)]
+pub struct BufRead(BufReadInner);
 
-    /// Create a new buffer instance using unlocked memory,
-    /// copying data from given reference.
-    /// There will not be a 'memlocked' version of this API as
-    /// that would encourage loading from sources that are already
-    /// insecurely exposed.
-    pub fn from_ref<R: AsRef<[u8]>>(r: R) -> Buffer {
-        let r: Box<[u8]> = r.as_ref().into();
-        r.into()
-    }
-
-    /// Create a new buffer instance using locked memory.
-    /// This is a finite resource, so don't go too crazy.
-    /// But it is worth doing for things like private keys so they don't get
-    /// swapped to disk in plaintext.
-    pub fn new_memlocked(size: usize) -> SodokenResult<Buffer> {
-        buffer_new_memlocked(size)
-    }
-
-    /// Deep clone the actual bytes of this buffer.
-    /// The type (memlocked or not) will be retained.
-    /// Not to be confused with "clone" on the Buffer struct,
-    /// which just bumps a refcount.
-    pub fn deep_clone(&self) -> SodokenResult<Buffer> {
-        self.0.deep_clone()
-    }
-
-    /// Obtain read access to the underlying buffer.
-    pub fn read_lock(&self) -> ReadGuard<'_> {
-        self.0.read_lock()
-    }
-
-    /// Obtain write access to the underlying buffer.
-    pub fn write_lock(&self) -> WriteGuard<'_> {
-        self.0.write_lock()
+impl BufRead {
+    /// Consruct a new BufRead that is NOT memlocked.
+    pub fn new_no_lock(content: &[u8]) -> Self {
+        Self(BufReadInner::NoLock(new_buf_read_no_lock(content)))
     }
 }
 
-impl AsBuffer for Buffer {
-    fn deep_clone(&self) -> SodokenResult<Buffer> {
-        self.0.deep_clone()
-    }
-
+impl AsBufRead for BufRead {
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
+}
 
-    fn write_lock(&self) -> WriteGuard<'_> {
-        self.0.write_lock()
+#[derive(Debug, Clone)]
+enum BufWriteInner {
+    NoLock(BufWriteNoLock),
+    Memlocked(BufWriteMemlocked),
+}
+
+impl AsBufRead for BufWriteInner {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        match self {
+            Self::NoLock(b) => b.read_lock(),
+            Self::Memlocked(b) => b.read_lock(),
+        }
     }
 }
 
-fn buffer_new_memlocked(size: usize) -> SodokenResult<Buffer> {
-    struct X(Mutex<safe::s3buf::S3Buf>);
-    impl Debug for X {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("SodokenBufferMemlocked").finish()
+impl AsBufWrite for BufWriteInner {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        match self {
+            Self::NoLock(b) => b.write_lock(),
+            Self::Memlocked(b) => b.write_lock(),
         }
     }
-    impl AsBuffer for X {
-        fn deep_clone(&self) -> SodokenResult<Buffer> {
-            let g = self.0.lock();
-            let g = g.deref();
-            let mut out = safe::s3buf::S3Buf::new(g.s)?;
-            g.set_readable();
-            out.set_writable();
-            out.deref_mut().copy_from_slice(g.deref());
-            g.set_no_access();
-            out.set_no_access();
-            Ok(Buffer(Arc::new(X(Mutex::new(out)))))
-        }
 
-        fn read_lock(&self) -> ReadGuard<'_> {
-            struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
-            impl Drop for X<'_> {
-                fn drop(&mut self) {
-                    self.0.set_no_access();
-                }
-            }
-            impl Deref for X<'_> {
-                type Target = [u8];
-                fn deref(&self) -> &Self::Target {
-                    &self.0
-                }
-            }
-            impl AsRef<[u8]> for X<'_> {
-                fn as_ref(&self) -> &[u8] {
-                    &self.0
-                }
-            }
-            impl Borrow<[u8]> for X<'_> {
-                fn borrow(&self) -> &[u8] {
-                    &self.0
-                }
-            }
-            impl<'a> AsRead<'a> for X<'a> {}
-            let g = self.0.lock();
-            g.set_readable();
-            ReadGuard(Box::new(X(g)))
-        }
-
-        fn write_lock(&self) -> WriteGuard<'_> {
-            struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
-            impl Drop for X<'_> {
-                fn drop(&mut self) {
-                    self.0.set_no_access();
-                }
-            }
-            impl Deref for X<'_> {
-                type Target = [u8];
-                fn deref(&self) -> &Self::Target {
-                    &self.0
-                }
-            }
-            impl DerefMut for X<'_> {
-                fn deref_mut(&mut self) -> &mut Self::Target {
-                    &mut self.0
-                }
-            }
-            impl AsRef<[u8]> for X<'_> {
-                fn as_ref(&self) -> &[u8] {
-                    &self.0
-                }
-            }
-            impl AsMut<[u8]> for X<'_> {
-                fn as_mut(&mut self) -> &mut [u8] {
-                    &mut self.0
-                }
-            }
-            impl Borrow<[u8]> for X<'_> {
-                fn borrow(&self) -> &[u8] {
-                    &self.0
-                }
-            }
-            impl BorrowMut<[u8]> for X<'_> {
-                fn borrow_mut(&mut self) -> &mut [u8] {
-                    &mut self.0
-                }
-            }
-            impl<'a> AsRead<'a> for X<'a> {}
-            impl<'a> AsWrite<'a> for X<'a> {}
-            let g = self.0.lock();
-            g.set_writable();
-            WriteGuard(Box::new(X(g)))
+    fn read_only(&self) -> BufRead {
+        match self {
+            Self::NoLock(b) => AsBufWrite::read_only(b),
+            Self::Memlocked(b) => AsBufWrite::read_only(b),
         }
     }
-    Ok(Buffer(Arc::new(X(Mutex::new(safe::s3buf::S3Buf::new(
-        size,
-    )?)))))
+}
+
+/// A concrete writable buffer type that may or may not be memlocked.
+#[derive(Debug, Clone)]
+pub struct BufWrite(BufWriteInner);
+
+impl BufWrite {
+    /// Consruct a new BufWrite that is NOT memlocked.
+    pub fn new_no_lock(size: usize) -> Self {
+        Self(BufWriteInner::NoLock(new_buf_write_no_lock(size)))
+    }
+
+    /// Construct a new memlocked BufWrite instance.
+    /// Use this for passwords / private keys, etc, but NOT everything,
+    /// locked memory is a finite resource.
+    pub fn new_memlocked(size: usize) -> SodokenResult<Self> {
+        Ok(Self(BufWriteInner::Memlocked(BufWriteMemlocked::new(
+            size,
+        )?)))
+    }
+}
+
+impl AsBufRead for BufWrite {
+    fn read_lock(&self) -> ReadGuard<'_> {
+        self.0.read_lock()
+    }
+}
+
+impl AsBufWrite for BufWrite {
+    fn write_lock(&self) -> WriteGuard<'_> {
+        self.0.write_lock()
+    }
+
+    fn read_only(&self) -> BufRead {
+        self.0.read_only()
+    }
 }
