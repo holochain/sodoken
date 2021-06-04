@@ -16,6 +16,7 @@ pub(crate) mod safe;
 mod buffer;
 pub use buffer::*;
 
+pub mod box_curve25519xchacha20poly1305;
 pub mod hash;
 pub mod random;
 pub mod sign;

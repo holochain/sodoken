@@ -300,3 +300,148 @@ pub(crate) fn crypto_sign_verify_detached(
         ) == 0_i32)
     }
 }
+
+pub(crate) fn crypto_box_curve25519xchacha20poly1305_seed_keypair(
+    pub_key: &mut [u8],
+    sec_key: &mut [u8],
+    seed: &[u8],
+) -> SodokenResult<()> {
+    if pub_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadPublicKeySize);
+    }
+
+    if sec_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadSecretKeySize);
+    }
+
+    if seed.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_SEEDBYTES
+            as usize
+    {
+        return Err(SodokenError::BadSeedSize);
+    }
+
+    // crypto_box_curve25519xchacha20poly1305_seed_keypair mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - pub_key size - checked above
+    //   - sec_key size - checked above
+    //   - seed size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_box_curve25519xchacha20poly1305_seed_keypair(
+            raw_ptr_char!(pub_key),
+            raw_ptr_char!(sec_key),
+            raw_ptr_char_immut!(seed),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
+pub(crate) fn crypto_box_curve25519xchacha20poly1305_keypair(
+    pub_key: &mut [u8],
+    sec_key: &mut [u8],
+) -> SodokenResult<()> {
+    if pub_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadPublicKeySize);
+    }
+
+    if sec_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadSecretKeySize);
+    }
+
+    // crypto_box_keypair mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - pub_key size - checked above
+    //   - sec_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_box_curve25519xchacha20poly1305_keypair(
+            raw_ptr_char!(pub_key),
+            raw_ptr_char!(sec_key),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
+pub(crate) fn crypto_box_curve25519xchacha20poly1305_extra_easy(
+    message: &[u8],
+    dest_pub_key: &[u8],
+    src_sec_key: &[u8],
+) -> SodokenResult<Vec<u8>> {
+    const NONCE: usize =
+        libsodium_sys::crypto_box_curve25519xchacha20poly1305_NONCEBYTES
+            as usize;
+
+    let cipher_len = message.len()
+        + NONCE
+        + libsodium_sys::crypto_box_curve25519xchacha20poly1305_MACBYTES
+            as usize;
+
+    if dest_pub_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadPublicKeySize);
+    }
+
+    if src_sec_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadSecretKeySize);
+    }
+
+    // crypto_box_curve25519xchacha20poly1305_easy mainly failes from sized checked above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - cipher size - checked above
+    //   - nonce size - checked above
+    //   - pub_key size - checked above
+    //   - sec_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        let mut nonce = Vec::with_capacity(NONCE);
+        nonce.set_len(NONCE);
+        randombytes_buf(&mut nonce)?;
+
+        let mut cipher = Vec::with_capacity(cipher_len);
+        cipher.set_len(cipher_len);
+
+        if libsodium_sys::crypto_box_curve25519xchacha20poly1305_easy(
+            cipher[NONCE..].as_mut_ptr() as *mut libc::c_uchar,
+            raw_ptr_char_immut!(message),
+            message.len() as libc::c_ulonglong,
+            raw_ptr_char_immut!(nonce),
+            raw_ptr_char_immut!(dest_pub_key),
+            raw_ptr_char_immut!(src_sec_key),
+        ) == 0_i32
+        {
+            cipher[..NONCE].copy_from_slice(&nonce);
+            return Ok(cipher);
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
