@@ -90,68 +90,96 @@ where
     .await
 }
 
-/*
+/// calculate the message len for an extra easy cipher len
+pub fn box_curve25519xchacha20poly1305_open_extra_easy_msg_len(
+    cipher_len: usize,
+) -> usize {
+    cipher_len
+        - libsodium_sys::crypto_box_curve25519xchacha20poly1305_NONCEBYTES
+            as usize
+        - libsodium_sys::crypto_box_curve25519xchacha20poly1305_MACBYTES
+            as usize
+}
+
+/// decrypt data with box_curve25519xchacha20poly1305 (extra easy)
+pub async fn box_curve25519xchacha20poly1305_open_extra_easy<M, C, P, S>(
+    message: M,
+    cipher: C,
+    src_pub_key: P,
+    dest_sec_key: S,
+) -> SodokenResult<()>
+where
+    M: AsBufWrite,
+    C: AsBufRead,
+    P: AsBufRead,
+    S: AsBufRead,
+{
+    tokio_exec(move || {
+        let mut message = message.write_lock();
+        let cipher = cipher.read_lock();
+        let src_pub_key = src_pub_key.read_lock();
+        let dest_sec_key = dest_sec_key.read_lock();
+        safe::sodium::crypto_box_curve25519xchacha20poly1305_open_extra_easy(
+            &mut message,
+            &cipher,
+            &src_pub_key,
+            &dest_sec_key,
+        )
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn sign() -> SodokenResult<()> {
-        let pub_ = BufWrite::new_no_lock(sign::SIGN_PUBLICKEYBYTES);
-        let sec = BufWrite::new_no_lock(sign::SIGN_SECRETKEYBYTES);
-        let sig = BufWrite::new_no_lock(sign::SIGN_BYTES);
+    async fn test_box() -> SodokenResult<()> {
+        let src_pub_ = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_PUBLICKEYBYTES);
+        let src_sec = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SECRETKEYBYTES);
+        let dest_pub_ = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_PUBLICKEYBYTES);
+        let dest_sec = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SECRETKEYBYTES);
         let msg = BufRead::new_no_lock(b"test message");
 
-        sign::sign_keypair(pub_.clone(), sec.clone()).await?;
-        sign::sign_detached(sig.clone(), msg.clone(), sec).await?;
-        assert!(
-            sign::sign_verify_detached(sig.clone(), msg.clone(), pub_.clone())
-                .await?
-        );
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_keypair(src_pub_.clone(), src_sec.clone()).await?;
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_keypair(dest_pub_.clone(), dest_sec.clone()).await?;
 
-        {
-            let mut g = sig.write_lock();
-            let g: &mut [u8] = &mut g;
-            g[0] = (std::num::Wrapping(g[0]) + std::num::Wrapping(1)).0;
-        }
+        let cipher = box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_extra_easy(msg.clone(), dest_pub_.clone(), src_sec.clone()).await?;
+        assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        assert!(!sign::sign_verify_detached(sig, msg, pub_).await?);
+        let msg_len = box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_open_extra_easy_msg_len(cipher.len());
+        let msg2 = BufWrite::new_no_lock(msg_len);
+
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_open_extra_easy(msg2.clone(), cipher.clone(), src_pub_.clone(), dest_sec.clone()).await?;
+
+        assert_eq!(&*msg.read_lock(), &*msg2.read_lock());
 
         Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn sign_seed() -> SodokenResult<()> {
-        let seed = BufRead::new_no_lock(&[0xdb; sign::SIGN_SEEDBYTES]);
-        let pub_ = BufWrite::new_no_lock(sign::SIGN_PUBLICKEYBYTES);
-        let sec = BufWrite::new_no_lock(sign::SIGN_SECRETKEYBYTES);
-        let sig = BufWrite::new_no_lock(sign::SIGN_BYTES);
+    async fn test_box_seed() -> SodokenResult<()> {
+        let src_seed = BufRead::new_no_lock(&[0xdb; box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SEEDBYTES]);
+        let src_pub_ = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_PUBLICKEYBYTES);
+        let src_sec = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SECRETKEYBYTES);
+        let dest_seed = BufRead::new_no_lock(&[0xbd; box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SEEDBYTES]);
+        let dest_pub_ = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_PUBLICKEYBYTES);
+        let dest_sec = BufWrite::new_no_lock(box_curve25519xchacha20poly1305::BOX_CURVE25519XCHACHAPOLY1305_SECRETKEYBYTES);
         let msg = BufRead::new_no_lock(b"test message");
 
-        sign::sign_seed_keypair(pub_.clone(), sec.clone(), seed).await?;
-        assert_eq!(
-            "[58, 28, 40, 195, 57, 146, 138, 152, 205, 130, 156, 8, 219, 48, 231, 103, 104, 100, 171, 188, 98, 19, 196, 30, 190, 195, 143, 136, 78, 73, 226, 59]",
-            format!("{:?}", &*pub_.read_lock()),
-        );
-        sign::sign_detached(sig.clone(), msg.clone(), sec).await?;
-        assert_eq!(
-            "[191, 44, 78, 57, 143, 164, 177, 39, 117, 147, 1, 26, 116, 228, 103, 73, 119, 177, 10, 232, 28, 247, 91, 156, 193, 13, 148, 168, 220, 138, 2, 130, 182, 178, 3, 230, 178, 201, 33, 92, 185, 186, 10, 28, 68, 60, 243, 143, 104, 37, 3, 17, 26, 52, 214, 240, 134, 30, 60, 199, 231, 64, 98, 6]",
-            format!("{:?}", &*sig.read_lock()),
-        );
-        assert!(
-            sign::sign_verify_detached(sig.clone(), msg.clone(), pub_.clone())
-                .await?
-        );
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_seed_keypair(src_pub_.clone(), src_sec.clone(), src_seed.clone()).await?;
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_seed_keypair(dest_pub_.clone(), dest_sec.clone(), dest_seed.clone()).await?;
 
-        {
-            let mut g = sig.write_lock();
-            let g: &mut [u8] = &mut g;
-            g[0] = (std::num::Wrapping(g[0]) + std::num::Wrapping(1)).0;
-        }
+        let cipher = box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_extra_easy(msg.clone(), dest_pub_.clone(), src_sec.clone()).await?;
+        assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        assert!(!sign::sign_verify_detached(sig, msg, pub_).await?);
+        let msg_len = box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_open_extra_easy_msg_len(cipher.len());
+        let msg2 = BufWrite::new_no_lock(msg_len);
+
+        box_curve25519xchacha20poly1305::box_curve25519xchacha20poly1305_open_extra_easy(msg2.clone(), cipher.clone(), src_pub_.clone(), dest_sec.clone()).await?;
+
+        assert_eq!(&*msg.read_lock(), &*msg2.read_lock());
 
         Ok(())
     }
 }
-*/

@@ -445,3 +445,66 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_extra_easy(
         Err(SodokenError::InternalSodium)
     }
 }
+
+pub(crate) fn crypto_box_curve25519xchacha20poly1305_open_extra_easy(
+    message: &mut [u8],
+    cipher: &[u8],
+    src_pub_key: &[u8],
+    dest_sec_key: &[u8],
+) -> SodokenResult<()> {
+    const NONCE: usize =
+        libsodium_sys::crypto_box_curve25519xchacha20poly1305_NONCEBYTES
+            as usize;
+
+    let msg_len = cipher.len()
+        - NONCE
+        - libsodium_sys::crypto_box_curve25519xchacha20poly1305_MACBYTES
+            as usize;
+
+    if message.len() != msg_len {
+        return Err(SodokenError::BadMessageSize);
+    }
+
+    if src_pub_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadPublicKeySize);
+    }
+
+    if dest_sec_key.len()
+        != libsodium_sys::crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES
+            as usize
+    {
+        return Err(SodokenError::BadSecretKeySize);
+    }
+
+    // crypto_box_curve25519xchacha20poly1305_open_easy mainly failes from sized checked above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - message size - checked above
+    //   - cipher size - checked above
+    //   - nonce size - checked above
+    //   - pub_key size - checked above
+    //   - sec_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        let mut nonce = Vec::with_capacity(NONCE);
+        nonce.set_len(NONCE);
+        nonce.copy_from_slice(&cipher[..NONCE]);
+
+        if libsodium_sys::crypto_box_curve25519xchacha20poly1305_open_easy(
+            raw_ptr_char!(message),
+            cipher[NONCE..].as_ptr() as *const libc::c_uchar,
+            (cipher.len() - NONCE) as libc::c_ulonglong,
+            raw_ptr_char_immut!(nonce),
+            raw_ptr_char_immut!(src_pub_key),
+            raw_ptr_char_immut!(dest_sec_key),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
