@@ -13,8 +13,8 @@ pub use error::*;
 
 pub(crate) mod safe;
 
-mod buffer;
-pub use buffer::*;
+mod buffer_;
+pub use buffer_::*;
 
 pub mod box_curve25519xchacha20poly1305;
 pub mod hash;

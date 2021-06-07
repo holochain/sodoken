@@ -4,11 +4,6 @@
 
 use crate::*;
 use libc::c_void;
-use std::{
-    borrow::{Borrow, BorrowMut},
-    convert::{AsMut, AsRef},
-    ops::{Deref, DerefMut},
-};
 
 #[derive(PartialEq)]
 enum ProtectState {
@@ -117,12 +112,9 @@ impl S3Buf {
 
         *self.p.borrow_mut() = ProtectState::ReadWrite;
     }
-}
 
-impl std::ops::Deref for S3Buf {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
+    /// as a slice
+    pub(crate) fn as_slice(&self) -> &[u8] {
         if *self.p.borrow() == ProtectState::NoAccess {
             panic!("Deref, but state is NoAccess");
         }
@@ -137,10 +129,9 @@ impl std::ops::Deref for S3Buf {
             &std::slice::from_raw_parts(self.z as *const u8, self.s)[..self.s]
         }
     }
-}
 
-impl std::ops::DerefMut for S3Buf {
-    fn deref_mut(&mut self) -> &mut Self::Target {
+    /// as a slice mut
+    pub(crate) fn as_slice_mut(&mut self) -> &mut [u8] {
         if *self.p.borrow() != ProtectState::ReadWrite {
             panic!("DerefMut, but state is not ReadWrite");
         }
@@ -156,29 +147,21 @@ impl std::ops::DerefMut for S3Buf {
                 [..self.s]
         }
     }
-}
 
-impl AsRef<[u8]> for S3Buf {
-    fn as_ref(&self) -> &[u8] {
-        self.deref()
+    /// as array
+    pub(crate) fn as_sized<const N: usize>(&self) -> &[u8; N] {
+        assert_eq!(self.s, N);
+        unsafe {
+            &*(self.as_slice().as_ptr() as *const [_; N])
+        }
     }
-}
 
-impl AsMut<[u8]> for S3Buf {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.deref_mut()
-    }
-}
-
-impl Borrow<[u8]> for S3Buf {
-    fn borrow(&self) -> &[u8] {
-        self.deref()
-    }
-}
-
-impl BorrowMut<[u8]> for S3Buf {
-    fn borrow_mut(&mut self) -> &mut [u8] {
-        self.deref_mut()
+    /// as array mut
+    pub(crate) fn as_sized_mut<const N: usize>(&mut self) -> &mut [u8; N] {
+        assert_eq!(self.s, N);
+        unsafe {
+            &mut *(self.as_slice_mut().as_mut_ptr() as *mut [_; N])
+        }
     }
 }
 
