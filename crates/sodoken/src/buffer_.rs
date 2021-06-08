@@ -53,20 +53,35 @@ impl<T: AsBufRead + ?Sized> AsBufRead for Arc<T> {
 }
 
 /// A sized readable buffer that may or may not be mem_locked.
-pub trait AsBufReadSized<const N: usize>: 'static + AsBufRead + Debug + Send + Sync {
+pub trait AsBufReadSized<const N: usize>:
+    'static + AsBufRead + Debug + Send + Sync
+{
     /// Obtain read access to the underlying buffer.
     fn read_lock_sized(&self) -> ReadGuardSized<'_, N>;
+
+    /// Convert to an unsized BufRead instance
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    fn to_read_unsized(&self) -> BufRead;
 }
 
 impl<T: AsBufReadSized<N>, const N: usize> AsBufReadSized<N> for Box<T> {
     fn read_lock_sized(&self) -> ReadGuardSized<'_, N> {
         AsBufReadSized::read_lock_sized(&**self)
     }
+
+    fn to_read_unsized(&self) -> BufRead {
+        AsBufReadSized::to_read_unsized(&**self)
+    }
 }
 
 impl<T: AsBufReadSized<N>, const N: usize> AsBufReadSized<N> for Arc<T> {
     fn read_lock_sized(&self) -> ReadGuardSized<'_, N> {
         AsBufReadSized::read_lock_sized(&**self)
+    }
+
+    fn to_read_unsized(&self) -> BufRead {
+        AsBufReadSized::to_read_unsized(&**self)
     }
 }
 
@@ -102,7 +117,9 @@ impl<T: AsBufWrite + ?Sized> AsBufWrite for Arc<T> {
 }
 
 /// A writable buffer that may or may not be mem_locked.
-pub trait AsBufWriteSized<const N: usize>: AsBufReadSized<N> + AsBufWrite {
+pub trait AsBufWriteSized<const N: usize>:
+    AsBufReadSized<N> + AsBufWrite
+{
     /// Obtain write access to the underlying buffer.
     fn write_lock_sized(&self) -> WriteGuardSized<'_, N>;
 
@@ -110,6 +127,11 @@ pub trait AsBufWriteSized<const N: usize>: AsBufReadSized<N> + AsBufWrite {
     /// without cloning internal data
     /// and without changing memory locking strategy.
     fn read_only_sized(&self) -> BufReadSized<N>;
+
+    /// Convert to an unsized BufWrite instance
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    fn to_write_unsized(&self) -> BufWrite;
 }
 
 impl<T: AsBufWriteSized<N>, const N: usize> AsBufWriteSized<N> for Box<T> {
@@ -120,6 +142,10 @@ impl<T: AsBufWriteSized<N>, const N: usize> AsBufWriteSized<N> for Box<T> {
     fn read_only_sized(&self) -> BufReadSized<N> {
         AsBufWriteSized::read_only_sized(&**self)
     }
+
+    fn to_write_unsized(&self) -> BufWrite {
+        AsBufWriteSized::to_write_unsized(&**self)
+    }
 }
 
 impl<T: AsBufWriteSized<N>, const N: usize> AsBufWriteSized<N> for Arc<T> {
@@ -129,6 +155,10 @@ impl<T: AsBufWriteSized<N>, const N: usize> AsBufWriteSized<N> for Arc<T> {
 
     fn read_only_sized(&self) -> BufReadSized<N> {
         AsBufWriteSized::read_only_sized(&**self)
+    }
+
+    fn to_write_unsized(&self) -> BufWrite {
+        AsBufWriteSized::to_write_unsized(&**self)
     }
 }
 
@@ -173,6 +203,27 @@ impl AsBufRead for BufRead {
 #[derive(Debug, Clone)]
 pub struct BufReadSized<const N: usize>(Arc<dyn AsBufReadSized<N>>);
 
+impl<const N: usize> From<[u8; N]> for BufReadSized<N> {
+    fn from(b: [u8; N]) -> Self {
+        let b: BufReadNoLockSized<N> = Arc::new(b);
+        Self(Arc::new(b))
+    }
+}
+
+impl<const N: usize> BufReadSized<N> {
+    /// Construct a new BufReadSized that is NOT mem_locked.
+    pub fn new_no_lock(content: [u8; N]) -> BufReadSized<N> {
+        content.into()
+    }
+
+    /// Convert to an unsized BufRead instance
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    pub fn to_read_unsized(&self) -> BufRead {
+        self.0.to_read_unsized()
+    }
+}
+
 impl<const N: usize> AsBufRead for BufReadSized<N> {
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
@@ -182,6 +233,10 @@ impl<const N: usize> AsBufRead for BufReadSized<N> {
 impl<const N: usize> AsBufReadSized<N> for BufReadSized<N> {
     fn read_lock_sized(&self) -> ReadGuardSized<'_, N> {
         self.0.read_lock_sized()
+    }
+
+    fn to_read_unsized(&self) -> BufRead {
+        BufRead(Arc::new(self.clone()))
     }
 }
 
@@ -279,8 +334,22 @@ impl<const N: usize> BufWriteSized<N> {
     /// Downgrade this to a read-only reference
     /// without cloning internal data
     /// and without changing memory locking strategy.
+    pub fn read_only(&self) -> BufRead {
+        self.0.read_only()
+    }
+
+    /// Downgrade this to a read-only reference
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
     pub fn read_only_sized(&self) -> BufReadSized<N> {
         self.0.read_only_sized()
+    }
+
+    /// Convert to an unsized BufWrite instance
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    pub fn to_write_unsized(&self) -> BufWrite {
+        self.0.to_write_unsized()
     }
 }
 
@@ -293,6 +362,10 @@ impl<const N: usize> AsBufRead for BufWriteSized<N> {
 impl<const N: usize> AsBufReadSized<N> for BufWriteSized<N> {
     fn read_lock_sized(&self) -> ReadGuardSized<'_, N> {
         self.0.read_lock_sized()
+    }
+
+    fn to_read_unsized(&self) -> BufRead {
+        self.0.to_read_unsized()
     }
 }
 
@@ -313,6 +386,10 @@ impl<const N: usize> AsBufWriteSized<N> for BufWriteSized<N> {
 
     fn read_only_sized(&self) -> BufReadSized<N> {
         self.0.read_only_sized()
+    }
+
+    fn to_write_unsized(&self) -> BufWrite {
+        self.0.to_write_unsized()
     }
 }
 
@@ -348,7 +425,7 @@ pub mod buffer {
         }
     }
 
-    /// This sized concrete read-only buffer type is NOT mem_locked.
+    /// This concrete sized read-only buffer type is NOT mem_locked.
     pub type BufReadNoLockSized<const N: usize> = Arc<[u8; N]>;
 
     impl<const N: usize> AsBufRead for BufReadNoLockSized<N> {
@@ -398,6 +475,10 @@ pub mod buffer {
             impl<'a, const N: usize> AsReadSized<'a, N> for X<'a, N> {}
             let x = Box::new(X(&*self));
             ReadGuardSized(x)
+        }
+
+        fn to_read_unsized(&self) -> BufRead {
+            BufRead(Arc::new(self.clone()))
         }
     }
 
@@ -525,6 +606,10 @@ pub mod buffer {
             let x = Box::new(X(self.read()));
             ReadGuardSized(x)
         }
+
+        fn to_read_unsized(&self) -> BufRead {
+            BufRead(Arc::new(self.clone()))
+        }
     }
 
     impl<const N: usize> AsBufWrite for BufWriteNoLockSized<N> {
@@ -615,6 +700,10 @@ pub mod buffer {
         fn read_only_sized(&self) -> BufReadSized<N> {
             BufReadSized(Arc::new(self.clone()))
         }
+
+        fn to_write_unsized(&self) -> BufWrite {
+            BufWrite(Arc::new(self.clone()))
+        }
     }
 
     /// A read guard, indicating we have gained access to read buffer memory.
@@ -643,7 +732,9 @@ pub mod buffer {
     impl<'a> AsRead<'a> for ReadGuard<'a> {}
 
     /// A read guard, indicating we have gained access to read sized buffer memory.
-    pub struct ReadGuardSized<'a, const N: usize>(pub Box<dyn 'a + AsReadSized<'a, N>>);
+    pub struct ReadGuardSized<'a, const N: usize>(
+        pub Box<dyn 'a + AsReadSized<'a, N>>,
+    );
 
     impl<'a, const N: usize> Deref for ReadGuardSized<'a, N> {
         type Target = [u8; N];
@@ -711,8 +802,10 @@ pub mod buffer {
     impl<'a> AsRead<'a> for WriteGuard<'a> {}
     impl<'a> AsWrite<'a> for WriteGuard<'a> {}
 
-    /// A write guard, indicating we have gained access to write buffer memory.
-    pub struct WriteGuardSized<'a, const N: usize>(pub Box<dyn 'a + AsWriteSized<'a, N>>);
+    /// A write guard, indicating we have gained access to write sized buffer memory.
+    pub struct WriteGuardSized<'a, const N: usize>(
+        pub Box<dyn 'a + AsWriteSized<'a, N>>,
+    );
 
     impl<'a, const N: usize> Deref for WriteGuardSized<'a, N> {
         type Target = [u8; N];
@@ -802,7 +895,9 @@ pub mod buffer {
     /// Use this for passwords / private keys, etc, but NOT everything,
     /// locked memory is a finite resource.
     #[derive(Clone)]
-    pub struct BufReadMemLockedSized<const N: usize>(Arc<Mutex<safe::s3buf::S3Buf>>);
+    pub struct BufReadMemLockedSized<const N: usize>(
+        Arc<Mutex<safe::s3buf::S3Buf>>,
+    );
 
     impl<const N: usize> Debug for BufReadMemLockedSized<N> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -870,6 +965,10 @@ pub mod buffer {
             let g = self.0.lock();
             g.set_readable();
             ReadGuardSized(Box::new(X(g)))
+        }
+
+        fn to_read_unsized(&self) -> BufRead {
+            BufRead(Arc::new(self.clone()))
         }
     }
 
@@ -980,7 +1079,9 @@ pub mod buffer {
     /// Use this for passwords / private keys, etc, but NOT everything,
     /// locked memory is a finite resource.
     #[derive(Clone)]
-    pub struct BufWriteMemLockedSized<const N: usize>(Arc<Mutex<safe::s3buf::S3Buf>>);
+    pub struct BufWriteMemLockedSized<const N: usize>(
+        Arc<Mutex<safe::s3buf::S3Buf>>,
+    );
 
     impl<const N: usize> BufWriteMemLockedSized<N> {
         /// Construct a new writable, mem_locked buffer.
@@ -1057,6 +1158,10 @@ pub mod buffer {
             let g = self.0.lock();
             g.set_readable();
             ReadGuardSized(Box::new(X(g)))
+        }
+
+        fn to_read_unsized(&self) -> BufRead {
+            BufRead(Arc::new(self.clone()))
         }
     }
 
@@ -1160,6 +1265,10 @@ pub mod buffer {
 
         fn read_only_sized(&self) -> BufReadSized<N> {
             BufReadSized(Arc::new(self.clone()))
+        }
+
+        fn to_write_unsized(&self) -> BufWrite {
+            BufWrite(Arc::new(self.clone()))
         }
     }
 }

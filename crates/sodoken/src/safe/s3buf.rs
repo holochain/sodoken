@@ -151,17 +151,13 @@ impl S3Buf {
     /// as array
     pub(crate) fn as_sized<const N: usize>(&self) -> &[u8; N] {
         assert_eq!(self.s, N);
-        unsafe {
-            &*(self.as_slice().as_ptr() as *const [_; N])
-        }
+        unsafe { &*(self.as_slice().as_ptr() as *const [_; N]) }
     }
 
     /// as array mut
     pub(crate) fn as_sized_mut<const N: usize>(&mut self) -> &mut [u8; N] {
         assert_eq!(self.s, N);
-        unsafe {
-            &mut *(self.as_slice_mut().as_mut_ptr() as *mut [_; N])
-        }
+        unsafe { &mut *(self.as_slice_mut().as_mut_ptr() as *mut [_; N]) }
     }
 }
 

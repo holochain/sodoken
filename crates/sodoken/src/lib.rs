@@ -16,7 +16,8 @@ pub(crate) mod safe;
 mod buffer_;
 pub use buffer_::*;
 
+pub mod argon2id;
+pub mod blake2b;
 pub mod box_curve25519xchacha20poly1305;
-pub mod hash;
 pub mod random;
 pub mod sign;
