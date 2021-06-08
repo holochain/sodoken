@@ -23,14 +23,14 @@ pub async fn sign_seed_keypair<P, S, Seed>(
     seed: Seed,
 ) -> SodokenResult<()>
 where
-    P: AsBufWrite,
-    S: AsBufWrite,
-    Seed: AsBufRead,
+    P: AsBufWriteSized<SIGN_PUBLICKEYBYTES>,
+    S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
+    Seed: AsBufReadSized<SIGN_SEEDBYTES>,
 {
     tokio_exec(move || {
-        let mut pub_key = pub_key.write_lock();
-        let mut sec_key = sec_key.write_lock();
-        let seed = seed.read_lock();
+        let mut pub_key = pub_key.write_lock_sized();
+        let mut sec_key = sec_key.write_lock_sized();
+        let seed = seed.read_lock_sized();
         safe::sodium::crypto_sign_seed_keypair(
             &mut pub_key,
             &mut sec_key,
@@ -43,12 +43,12 @@ where
 /// create an ed25519 signature keypair from entropy
 pub async fn sign_keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: AsBufWrite,
-    S: AsBufWrite,
+    P: AsBufWriteSized<SIGN_PUBLICKEYBYTES>,
+    S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
 {
     tokio_exec(move || {
-        let mut pub_key = pub_key.write_lock();
-        let mut sec_key = sec_key.write_lock();
+        let mut pub_key = pub_key.write_lock_sized();
+        let mut sec_key = sec_key.write_lock_sized();
         safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key)
     })
     .await
@@ -61,14 +61,14 @@ pub async fn sign_detached<Sig, M, S>(
     sec_key: S,
 ) -> SodokenResult<()>
 where
-    Sig: AsBufWrite,
+    Sig: AsBufWriteSized<SIGN_BYTES>,
     M: AsBufRead,
-    S: AsBufRead,
+    S: AsBufReadSized<SIGN_SECRETKEYBYTES>,
 {
     tokio_exec(move || {
-        let mut signature = signature.write_lock();
+        let mut signature = signature.write_lock_sized();
         let message = message.read_lock();
-        let sec_key = sec_key.read_lock();
+        let sec_key = sec_key.read_lock_sized();
         safe::sodium::crypto_sign_detached(&mut signature, &message, &sec_key)
     })
     .await
@@ -81,14 +81,14 @@ pub async fn sign_verify_detached<Sig, M, P>(
     pub_key: P,
 ) -> SodokenResult<bool>
 where
-    Sig: AsBufRead,
+    Sig: AsBufReadSized<SIGN_BYTES>,
     M: AsBufRead,
-    P: AsBufRead,
+    P: AsBufReadSized<SIGN_PUBLICKEYBYTES>,
 {
     tokio_exec(move || {
-        let signature = signature.read_lock();
+        let signature = signature.read_lock_sized();
         let message = message.read_lock();
-        let pub_key = pub_key.read_lock();
+        let pub_key = pub_key.read_lock_sized();
         safe::sodium::crypto_sign_verify_detached(
             &signature, &message, &pub_key,
         )
@@ -102,9 +102,12 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn sign() -> SodokenResult<()> {
-        let pub_ = BufWrite::new_no_lock(sign::SIGN_PUBLICKEYBYTES);
-        let sec = BufWrite::new_no_lock(sign::SIGN_SECRETKEYBYTES);
-        let sig = BufWrite::new_no_lock(sign::SIGN_BYTES);
+        let pub_: BufWriteSized<{ sign::SIGN_PUBLICKEYBYTES }> =
+            BufWriteSized::new_no_lock();
+        let sec: BufWriteSized<{ sign::SIGN_SECRETKEYBYTES }> =
+            BufWriteSized::new_mem_locked().unwrap();
+        let sig: BufWriteSized<{ sign::SIGN_BYTES }> =
+            BufWriteSized::new_no_lock();
         let msg = BufRead::new_no_lock(b"test message");
 
         sign::sign_keypair(pub_.clone(), sec.clone()).await?;
@@ -127,10 +130,14 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn sign_seed() -> SodokenResult<()> {
-        let seed = BufRead::new_no_lock(&[0xdb; sign::SIGN_SEEDBYTES]);
-        let pub_ = BufWrite::new_no_lock(sign::SIGN_PUBLICKEYBYTES);
-        let sec = BufWrite::new_no_lock(sign::SIGN_SECRETKEYBYTES);
-        let sig = BufWrite::new_no_lock(sign::SIGN_BYTES);
+        let seed: BufReadSized<{ sign::SIGN_SEEDBYTES }> =
+            BufReadSized::new_no_lock([0xdb; sign::SIGN_SEEDBYTES]);
+        let pub_: BufWriteSized<{ sign::SIGN_PUBLICKEYBYTES }> =
+            BufWriteSized::new_no_lock();
+        let sec: BufWriteSized<{ sign::SIGN_SECRETKEYBYTES }> =
+            BufWriteSized::new_mem_locked().unwrap();
+        let sig: BufWriteSized<{ sign::SIGN_BYTES }> =
+            BufWriteSized::new_no_lock();
         let msg = BufRead::new_no_lock(b"test message");
 
         sign::sign_seed_keypair(pub_.clone(), sec.clone(), seed).await?;

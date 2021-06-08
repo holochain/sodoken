@@ -34,6 +34,18 @@ pub enum SodokenError {
     #[error("BadSeedSize")]
     BadSeedSize,
 
+    /// improper size for cipher
+    #[error("BadCipherSize")]
+    BadCipherSize,
+
+    /// improper size for nonce
+    #[error("BadNonceSize")]
+    BadNonceSize,
+
+    /// improper size for message
+    #[error("BadMessageSize")]
+    BadMessageSize,
+
     /// the passphrase size for this call didn't fall within constraints
     #[error("BadPassphraseSize")]
     BadPassphraseSize,
