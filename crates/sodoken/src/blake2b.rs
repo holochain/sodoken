@@ -29,7 +29,28 @@ where
     M: AsBufRead,
     K: AsBufRead,
 {
-    tokio_exec(move || {
+    // it doesn't take very long to hash a small amount,
+    // below this count, we can run inside a task,
+    // above this amount, we should run in a blocking task
+    // to make sure we don't hang up tokio core threads
+    //
+    // -- Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+    // -- 4 physical cores / 8 logical cores
+    //
+    // -- executed directly:
+    // blake2b/51200           time:   [45.831 us 45.906 us 45.995 us]
+    //                         thrpt:  [1.0367 GiB/s 1.0387 GiB/s 1.0404 GiB/s]
+    // -- executed via spawn_blocking:
+    // blake2b/51200           time:   [52.361 us 52.810 us 53.291 us]
+    //                         thrpt:  [916.26 MiB/s 924.60 MiB/s 932.53 MiB/s]
+    //
+    // at ~50KiB the overhead of spawn_blocking (~5/6 us) starts to become
+    // less significant, so switch over to that to avoid starving other core
+    // tokio tasks.
+    const BLOCKING_THRESHOLD: usize = 1024 * 50;
+
+    let len = message.len();
+    let exec_hash = move || {
         let mut hash = hash.write_lock();
         let message = message.read_lock();
         match key {
@@ -43,8 +64,12 @@ where
             }
             None => safe::sodium::crypto_generichash(&mut hash, &message, None),
         }
-    })
-    .await
+    };
+
+    if len <= BLOCKING_THRESHOLD {
+        return exec_hash();
+    }
+    tokio_exec_blocking(exec_hash).await
 }
 
 /// blake2b hashing scheme

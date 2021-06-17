@@ -36,17 +36,33 @@ pub trait AsWriteSized<'a, const N: usize>:
 
 /// A readable buffer that may or may not be mem_locked.
 pub trait AsBufRead: 'static + Debug + Send + Sync {
+    /// The length of this buffer.
+    fn len(&self) -> usize;
+
+    /// Is this buffer empty?
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Obtain read access to the underlying buffer.
     fn read_lock(&self) -> ReadGuard<'_>;
 }
 
 impl<T: AsBufRead + ?Sized> AsBufRead for Box<T> {
+    fn len(&self) -> usize {
+        AsBufRead::len(&**self)
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         AsBufRead::read_lock(&**self)
     }
 }
 
 impl<T: AsBufRead + ?Sized> AsBufRead for Arc<T> {
+    fn len(&self) -> usize {
+        AsBufRead::len(&**self)
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         AsBufRead::read_lock(&**self)
     }
@@ -194,6 +210,10 @@ impl BufRead {
 }
 
 impl AsBufRead for BufRead {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
@@ -225,6 +245,10 @@ impl<const N: usize> BufReadSized<N> {
 }
 
 impl<const N: usize> AsBufRead for BufReadSized<N> {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
@@ -286,6 +310,10 @@ impl BufWrite {
 }
 
 impl AsBufRead for BufWrite {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
@@ -354,6 +382,10 @@ impl<const N: usize> BufWriteSized<N> {
 }
 
 impl<const N: usize> AsBufRead for BufWriteSized<N> {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
     fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
@@ -401,6 +433,10 @@ pub mod buffer {
     pub type BufReadNoLock = Arc<[u8]>;
 
     impl AsBufRead for BufReadNoLock {
+        fn len(&self) -> usize {
+            (**self).len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(&'a [u8]);
             impl Deref for X<'_> {
@@ -429,6 +465,10 @@ pub mod buffer {
     pub type BufReadNoLockSized<const N: usize> = Arc<[u8; N]>;
 
     impl<const N: usize> AsBufRead for BufReadNoLockSized<N> {
+        fn len(&self) -> usize {
+            (**self).len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(&'a [u8]);
             impl Deref for X<'_> {
@@ -486,6 +526,10 @@ pub mod buffer {
     pub type BufWriteNoLock = Arc<RwLock<Box<[u8]>>>;
 
     impl AsBufRead for BufWriteNoLock {
+        fn len(&self) -> usize {
+            self.read().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(RwLockReadGuard<'a, Box<[u8]>>);
             impl Deref for X<'_> {
@@ -559,6 +603,10 @@ pub mod buffer {
     pub type BufWriteNoLockSized<const N: usize> = Arc<RwLock<[u8; N]>>;
 
     impl<const N: usize> AsBufRead for BufWriteNoLockSized<N> {
+        fn len(&self) -> usize {
+            self.read().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a, const N: usize>(RwLockReadGuard<'a, [u8; N]>);
             impl<const N: usize> Deref for X<'_, N> {
@@ -861,6 +909,10 @@ pub mod buffer {
     }
 
     impl AsBufRead for BufReadMemLocked {
+        fn len(&self) -> usize {
+            self.0.lock().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
             impl Drop for X<'_> {
@@ -906,6 +958,10 @@ pub mod buffer {
     }
 
     impl<const N: usize> AsBufRead for BufReadMemLockedSized<N> {
+        fn len(&self) -> usize {
+            self.0.lock().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a, const N: usize>(MutexGuard<'a, safe::s3buf::S3Buf>);
             impl<const N: usize> Drop for X<'_, N> {
@@ -994,6 +1050,10 @@ pub mod buffer {
     }
 
     impl AsBufRead for BufWriteMemLocked {
+        fn len(&self) -> usize {
+            self.0.lock().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(MutexGuard<'a, safe::s3buf::S3Buf>);
             impl Drop for X<'_> {
@@ -1099,6 +1159,10 @@ pub mod buffer {
     }
 
     impl<const N: usize> AsBufRead for BufWriteMemLockedSized<N> {
+        fn len(&self) -> usize {
+            self.0.lock().len()
+        }
+
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a, const N: usize>(MutexGuard<'a, safe::s3buf::S3Buf>);
             impl<const N: usize> Drop for X<'_, N> {

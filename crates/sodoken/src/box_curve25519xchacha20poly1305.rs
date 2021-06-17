@@ -35,7 +35,7 @@ where
     S: AsBufWriteSized<BOX_SECRETKEYBYTES>,
     Seed: AsBufReadSized<BOX_SEEDBYTES>,
 {
-    tokio_exec(move || {
+    tokio_exec_blocking(move || {
         let mut pub_key = pub_key.write_lock_sized();
         let mut sec_key = sec_key.write_lock_sized();
         let seed = seed.read_lock_sized();
@@ -54,7 +54,7 @@ where
     P: AsBufWriteSized<BOX_PUBLICKEYBYTES>,
     S: AsBufWriteSized<BOX_SECRETKEYBYTES>,
 {
-    tokio_exec(move || {
+    tokio_exec_blocking(move || {
         let mut pub_key = pub_key.write_lock_sized();
         let mut sec_key = sec_key.write_lock_sized();
         safe::sodium::crypto_box_curve25519xchacha20poly1305_keypair(
@@ -78,7 +78,7 @@ where
     P: AsBufReadSized<BOX_PUBLICKEYBYTES>,
     S: AsBufReadSized<BOX_SECRETKEYBYTES>,
 {
-    tokio_exec(move || {
+    tokio_exec_blocking(move || {
         let nonce = nonce.read_lock_sized();
         let message = message.read_lock();
         let dest_pub_key = dest_pub_key.read_lock_sized();
@@ -114,7 +114,7 @@ where
     P: AsBufReadSized<BOX_PUBLICKEYBYTES>,
     S: AsBufReadSized<BOX_SECRETKEYBYTES>,
 {
-    tokio_exec(move || {
+    tokio_exec_blocking(move || {
         let nonce = nonce.read_lock_sized();
         let mut message = message.write_lock();
         let cipher = cipher.read_lock();
