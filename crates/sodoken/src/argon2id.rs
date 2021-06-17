@@ -67,7 +67,7 @@ where
     P: AsBufRead,
     S: AsBufReadSized<SALTBYTES>,
 {
-    tokio_exec(move || {
+    tokio_exec_blocking(move || {
         let mut hash = hash.write_lock();
         let passphrase = passphrase.read_lock();
         let salt = salt.read_lock_sized();

@@ -27,17 +27,10 @@ where
     S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
     Seed: AsBufReadSized<SIGN_SEEDBYTES>,
 {
-    tokio_exec(move || {
-        let mut pub_key = pub_key.write_lock_sized();
-        let mut sec_key = sec_key.write_lock_sized();
-        let seed = seed.read_lock_sized();
-        safe::sodium::crypto_sign_seed_keypair(
-            &mut pub_key,
-            &mut sec_key,
-            &seed,
-        )
-    })
-    .await
+    let mut pub_key = pub_key.write_lock_sized();
+    let mut sec_key = sec_key.write_lock_sized();
+    let seed = seed.read_lock_sized();
+    safe::sodium::crypto_sign_seed_keypair(&mut pub_key, &mut sec_key, &seed)
 }
 
 /// create an ed25519 signature keypair from entropy
@@ -46,12 +39,9 @@ where
     P: AsBufWriteSized<SIGN_PUBLICKEYBYTES>,
     S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
 {
-    tokio_exec(move || {
-        let mut pub_key = pub_key.write_lock_sized();
-        let mut sec_key = sec_key.write_lock_sized();
-        safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key)
-    })
-    .await
+    let mut pub_key = pub_key.write_lock_sized();
+    let mut sec_key = sec_key.write_lock_sized();
+    safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key)
 }
 
 /// create a signature from a signature private key
@@ -65,13 +55,38 @@ where
     M: AsBufRead,
     S: AsBufReadSized<SIGN_SECRETKEYBYTES>,
 {
-    tokio_exec(move || {
+    // it doesn't take very long to sign a small message,
+    // below this count, we can run inside a task,
+    // above this amount, we should run in a blocking task
+    // to make sure we don't hang up tokio core threads
+    //
+    // -- Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+    // -- 4 physical cores / 8 logical cores
+    //
+    // -- executed directly:
+    // sign_detached/10240     time:   [75.876 us 76.038 us 76.226 us]
+    //                         thrpt:  [128.11 MiB/s 128.43 MiB/s 128.70 MiB/s]
+    // -- executed via spawn_blocking:
+    // sign_detached/10240     time:   [89.587 us 90.324 us 91.162 us]
+    //                         thrpt:  [107.12 MiB/s 108.12 MiB/s 109.01 MiB/s]
+    //
+    // at ~10KiB the overhead of spawn_blocking (~5/6 us) starts to become
+    // less significant, so switch over to that to avoid starving other core
+    // tokio tasks.
+    const BLOCKING_THRESHOLD: usize = 1024 * 10;
+
+    let len = message.len();
+    let exec_sign = move || {
         let mut signature = signature.write_lock_sized();
         let message = message.read_lock();
         let sec_key = sec_key.read_lock_sized();
         safe::sodium::crypto_sign_detached(&mut signature, &message, &sec_key)
-    })
-    .await
+    };
+
+    if len <= BLOCKING_THRESHOLD {
+        return exec_sign();
+    }
+    tokio_exec_blocking(exec_sign).await
 }
 
 /// create a signature from a signature private key
@@ -85,15 +100,42 @@ where
     M: AsBufRead,
     P: AsBufReadSized<SIGN_PUBLICKEYBYTES>,
 {
-    tokio_exec(move || {
+    // it doesn't take very long to verify a small message,
+    // below this count, we can run inside a task,
+    // above this amount, we should run in a blocking task
+    // to make sure we don't hang up tokio core threads
+    //
+    // -- Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz
+    // -- 4 physical cores / 8 logical cores
+    //
+    // -- executed directly:
+    // sign_verify_detached/10240
+    //                         time:   [91.999 us 92.228 us 92.479 us]
+    //                         thrpt:  [105.60 MiB/s 105.89 MiB/s 106.15 MiB/s]
+    // -- executed via spawn_blocking:
+    // sign_verify_detached/10240
+    //                         time:   [101.83 us 103.36 us 104.97 us]
+    //                         thrpt:  [93.034 MiB/s 94.481 MiB/s 95.899 MiB/s]
+    //
+    // at ~10KiB the overhead of spawn_blocking (~5/6 us) starts to become
+    // less significant, so switch over to that to avoid starving other core
+    // tokio tasks.
+    const BLOCKING_THRESHOLD: usize = 1024 * 10;
+
+    let len = message.len();
+    let exec_verify = move || {
         let signature = signature.read_lock_sized();
         let message = message.read_lock();
         let pub_key = pub_key.read_lock_sized();
         safe::sodium::crypto_sign_verify_detached(
             &signature, &message, &pub_key,
         )
-    })
-    .await
+    };
+
+    if len <= BLOCKING_THRESHOLD {
+        return exec_verify();
+    }
+    tokio_exec_blocking(exec_verify).await
 }
 
 #[cfg(test)]

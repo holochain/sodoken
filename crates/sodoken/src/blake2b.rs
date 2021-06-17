@@ -69,7 +69,7 @@ where
     if len <= BLOCKING_THRESHOLD {
         return exec_hash();
     }
-    tokio_exec(exec_hash).await
+    tokio_exec_blocking(exec_hash).await
 }
 
 /// blake2b hashing scheme
