@@ -71,6 +71,11 @@ impl S3Buf {
         })
     }
 
+    /// len
+    pub(crate) fn len(&self) -> usize {
+        self.s
+    }
+
     /// adjust the memory protection for NO ACCESS
     pub(crate) fn set_no_access(&self) {
         if *self.p.borrow() == ProtectState::NoAccess {
