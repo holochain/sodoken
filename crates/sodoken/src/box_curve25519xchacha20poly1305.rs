@@ -31,10 +31,13 @@ pub async fn box_seed_keypair<P, S, Seed>(
     seed: Seed,
 ) -> SodokenResult<()>
 where
-    P: AsBufWriteSized<BOX_PUBLICKEYBYTES>,
-    S: AsBufWriteSized<BOX_SECRETKEYBYTES>,
-    Seed: AsBufReadSized<BOX_SEEDBYTES>,
+    P: Into<BufWriteSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<BOX_SECRETKEYBYTES>> + 'static + Send,
+    Seed: Into<BufReadSized<BOX_SEEDBYTES>> + 'static + Send,
 {
+    let pub_key = pub_key.into();
+    let sec_key = sec_key.into();
+    let seed = seed.into();
     tokio_exec_blocking(move || {
         let mut pub_key = pub_key.write_lock_sized();
         let mut sec_key = sec_key.write_lock_sized();
@@ -51,9 +54,11 @@ where
 /// create a box curve25519xchacha20poly1305 keypair from entropy
 pub async fn box_keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: AsBufWriteSized<BOX_PUBLICKEYBYTES>,
-    S: AsBufWriteSized<BOX_SECRETKEYBYTES>,
+    P: Into<BufWriteSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<BOX_SECRETKEYBYTES>> + 'static + Send,
 {
+    let pub_key = pub_key.into();
+    let sec_key = sec_key.into();
     tokio_exec_blocking(move || {
         let mut pub_key = pub_key.write_lock_sized();
         let mut sec_key = sec_key.write_lock_sized();
@@ -73,11 +78,15 @@ pub async fn box_easy<N, M, P, S>(
     src_sec_key: S,
 ) -> SodokenResult<BufRead>
 where
-    N: AsBufReadSized<BOX_NONCEBYTES>,
-    M: AsBufRead,
-    P: AsBufReadSized<BOX_PUBLICKEYBYTES>,
-    S: AsBufReadSized<BOX_SECRETKEYBYTES>,
+    N: Into<BufReadSized<BOX_NONCEBYTES>> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    P: Into<BufReadSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<BOX_SECRETKEYBYTES>> + 'static + Send,
 {
+    let nonce = nonce.into();
+    let message = message.into();
+    let dest_pub_key = dest_pub_key.into();
+    let src_sec_key = src_sec_key.into();
     tokio_exec_blocking(move || {
         let nonce = nonce.read_lock_sized();
         let message = message.read_lock();
@@ -108,12 +117,17 @@ pub async fn box_open_easy<N, M, C, P, S>(
     dest_sec_key: S,
 ) -> SodokenResult<()>
 where
-    N: AsBufReadSized<BOX_NONCEBYTES>,
-    M: AsBufWrite,
-    C: AsBufRead,
-    P: AsBufReadSized<BOX_PUBLICKEYBYTES>,
-    S: AsBufReadSized<BOX_SECRETKEYBYTES>,
+    N: Into<BufReadSized<BOX_NONCEBYTES>> + 'static + Send,
+    M: Into<BufWrite> + 'static + Send,
+    C: Into<BufRead> + 'static + Send,
+    P: Into<BufReadSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<BOX_SECRETKEYBYTES>> + 'static + Send,
 {
+    let nonce = nonce.into();
+    let message = message.into();
+    let cipher = cipher.into();
+    let src_pub_key = src_pub_key.into();
+    let dest_sec_key = dest_sec_key.into();
     tokio_exec_blocking(move || {
         let nonce = nonce.read_lock_sized();
         let mut message = message.write_lock();

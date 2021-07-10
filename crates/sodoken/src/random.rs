@@ -3,7 +3,12 @@
 use crate::*;
 
 /// Fill a buffer with cryptographically secure randomness
-pub async fn randombytes_buf<B: AsBufWrite>(buf: B) -> SodokenResult<()> {
+pub async fn randombytes_buf<B>(buf: B) -> SodokenResult<()>
+where
+    B: Into<BufWrite> + 'static + Send,
+{
+    let buf = buf.into();
+
     // it doesn't take very long to fill a small buffer with random bytes,
     // below this count, we can run inside a task,
     // above this amount, we should run in a blocking task
@@ -39,7 +44,7 @@ pub async fn randombytes_buf<B: AsBufWrite>(buf: B) -> SodokenResult<()> {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::sync::Arc;
+    //use std::sync::Arc;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn randombytes_buf() -> SodokenResult<()> {
@@ -47,15 +52,6 @@ mod tests {
         random::randombytes_buf(buf.clone()).await?;
         let data = buf.read_lock().to_vec();
         assert_ne!(&vec![0; 32], &data);
-
-        // also check that a trait-object works
-        // and that it still refers to the same memory
-        let buf2 = buf.clone();
-        let buf2: Arc<dyn AsBufWrite> = Arc::new(buf2);
-        random::randombytes_buf(buf2.clone()).await?;
-        assert_ne!(&vec![0; 32], &*buf2.read_lock());
-        assert_ne!(&data, &*buf2.read_lock());
-        assert_eq!(&*buf.read_lock(), &*buf2.read_lock());
 
         Ok(())
     }
