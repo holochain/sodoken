@@ -25,10 +25,13 @@ async fn hash_inner<H, M, K>(
     key: Option<K>,
 ) -> SodokenResult<()>
 where
-    H: AsBufWrite,
-    M: AsBufRead,
-    K: AsBufRead,
+    H: Into<BufWrite> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    K: Into<BufRead> + 'static + Send,
 {
+    let hash = hash.into();
+    let message = message.into();
+
     // it doesn't take very long to hash a small amount,
     // below this count, we can run inside a task,
     // above this amount, we should run in a blocking task
@@ -55,6 +58,7 @@ where
         let message = message.read_lock();
         match key {
             Some(key) => {
+                let key = key.into();
                 let key = key.read_lock();
                 safe::sodium::crypto_generichash(
                     &mut hash,
@@ -79,9 +83,9 @@ pub async fn hash_with_key<H, M, K>(
     key: K,
 ) -> SodokenResult<()>
 where
-    H: AsBufWrite,
-    M: AsBufRead,
-    K: AsBufRead,
+    H: Into<BufWrite> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    K: Into<BufRead> + 'static + Send,
 {
     hash_inner(hash, message, Some(key)).await
 }
@@ -89,8 +93,8 @@ where
 /// blake2b hashing scheme
 pub async fn hash<H, M>(hash: H, message: M) -> SodokenResult<()>
 where
-    H: AsBufWrite,
-    M: AsBufRead,
+    H: Into<BufWrite> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
 {
     hash_inner::<H, M, BufRead>(hash, message, None).await
 }
@@ -98,31 +102,13 @@ where
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use std::sync::Arc;
+    //use std::sync::Arc;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blake2b() -> SodokenResult<()> {
         let msg = BufRead::new_no_lock(b"test message");
         let hash = BufWrite::new_no_lock(blake2b::BYTES_MIN);
         blake2b::hash(hash.clone(), msg.clone()).await?;
-        assert_eq!(
-            "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
-            format!("{:?}", &*hash.read_lock()),
-        );
-
-        // also check that a trait-object works
-        let msg2 = msg.clone();
-        let msg2: Box<dyn AsBufRead> = Box::new(msg2);
-        blake2b::hash(hash.clone(), msg2).await?;
-        assert_eq!(
-            "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
-            format!("{:?}", &*hash.read_lock()),
-        );
-
-        // also check that arc trait-object works
-        let msg3 = msg.clone();
-        let msg3: Arc<dyn AsBufRead> = Arc::new(msg3);
-        blake2b::hash(hash.clone(), msg3).await?;
         assert_eq!(
             "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
             format!("{:?}", &*hash.read_lock()),

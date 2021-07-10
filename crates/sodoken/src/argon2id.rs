@@ -63,10 +63,13 @@ pub async fn hash<H, P, S>(
     mem_limit: usize,
 ) -> SodokenResult<()>
 where
-    H: AsBufWrite,
-    P: AsBufRead,
-    S: AsBufReadSized<SALTBYTES>,
+    H: Into<BufWrite> + 'static + Send,
+    P: Into<BufRead> + 'static + Send,
+    S: Into<BufReadSized<SALTBYTES>> + 'static + Send,
 {
+    let hash = hash.into();
+    let passphrase = passphrase.into();
+    let salt = salt.into();
     tokio_exec_blocking(move || {
         let mut hash = hash.write_lock();
         let passphrase = passphrase.read_lock();

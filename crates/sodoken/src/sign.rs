@@ -23,10 +23,14 @@ pub async fn sign_seed_keypair<P, S, Seed>(
     seed: Seed,
 ) -> SodokenResult<()>
 where
-    P: AsBufWriteSized<SIGN_PUBLICKEYBYTES>,
-    S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
-    Seed: AsBufReadSized<SIGN_SEEDBYTES>,
+    P: Into<BufWriteSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
+    Seed: Into<BufReadSized<SIGN_SEEDBYTES>> + 'static + Send,
 {
+    let pub_key = pub_key.into();
+    let sec_key = sec_key.into();
+    let seed = seed.into();
+
     let mut pub_key = pub_key.write_lock_sized();
     let mut sec_key = sec_key.write_lock_sized();
     let seed = seed.read_lock_sized();
@@ -36,9 +40,12 @@ where
 /// create an ed25519 signature keypair from entropy
 pub async fn sign_keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: AsBufWriteSized<SIGN_PUBLICKEYBYTES>,
-    S: AsBufWriteSized<SIGN_SECRETKEYBYTES>,
+    P: Into<BufWriteSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
 {
+    let pub_key = pub_key.into();
+    let sec_key = sec_key.into();
+
     let mut pub_key = pub_key.write_lock_sized();
     let mut sec_key = sec_key.write_lock_sized();
     safe::sodium::crypto_sign_keypair(&mut pub_key, &mut sec_key)
@@ -51,10 +58,14 @@ pub async fn sign_detached<Sig, M, S>(
     sec_key: S,
 ) -> SodokenResult<()>
 where
-    Sig: AsBufWriteSized<SIGN_BYTES>,
-    M: AsBufRead,
-    S: AsBufReadSized<SIGN_SECRETKEYBYTES>,
+    Sig: Into<BufWriteSized<SIGN_BYTES>> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    S: Into<BufReadSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
 {
+    let signature = signature.into();
+    let message = message.into();
+    let sec_key = sec_key.into();
+
     // it doesn't take very long to sign a small message,
     // below this count, we can run inside a task,
     // above this amount, we should run in a blocking task
@@ -96,10 +107,14 @@ pub async fn sign_verify_detached<Sig, M, P>(
     pub_key: P,
 ) -> SodokenResult<bool>
 where
-    Sig: AsBufReadSized<SIGN_BYTES>,
-    M: AsBufRead,
-    P: AsBufReadSized<SIGN_PUBLICKEYBYTES>,
+    Sig: Into<BufReadSized<SIGN_BYTES>> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    P: Into<BufReadSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
 {
+    let signature = signature.into();
+    let message = message.into();
+    let pub_key = pub_key.into();
+
     // it doesn't take very long to verify a small message,
     // below this count, we can run inside a task,
     // above this amount, we should run in a blocking task
