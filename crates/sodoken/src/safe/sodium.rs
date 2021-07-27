@@ -402,3 +402,79 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_open_easy(
         Err(SodokenError::InternalSodium)
     }
 }
+
+#[allow(dead_code)]
+pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
+    key: &[u8;
+         libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES
+             as usize],
+) -> SodokenResult<(
+    libsodium_sys::crypto_secretstream_xchacha20poly1305_state,
+    Box<[u8]>,
+)> {
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sizes enforced by type system
+    assert!(*SODIUM_INIT);
+
+    let mut state = libsodium_sys::crypto_secretstream_xchacha20poly1305_state {
+        k: Default::default(),
+        nonce: Default::default(),
+        _pad: Default::default(),
+    };
+
+    let mut header = vec![0; libsodium_sys::crypto_secretstream_xchacha20poly1305_HEADERBYTES as usize];
+
+    let res = unsafe {
+        let header = &mut header;
+        libsodium_sys::crypto_secretstream_xchacha20poly1305_init_push(
+            &mut state,
+            raw_ptr_char!(header),
+            raw_ptr_char_immut!(key),
+        )
+    };
+
+    if res == 0_i32 {
+        return Ok((state, header.into_boxed_slice()));
+    }
+
+    Err(SodokenError::InternalSodium)
+}
+
+#[allow(dead_code)]
+pub(crate) fn crypto_secretstream_xchacha20poly1305_init_pull(
+    header: &[u8;
+         libsodium_sys::crypto_secretstream_xchacha20poly1305_HEADERBYTES
+             as usize],
+    key: &[u8;
+         libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES
+             as usize],
+) -> SodokenResult<
+    libsodium_sys::crypto_secretstream_xchacha20poly1305_state,
+> {
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sizes enforced by type system
+    assert!(*SODIUM_INIT);
+
+    let mut state = libsodium_sys::crypto_secretstream_xchacha20poly1305_state {
+        k: Default::default(),
+        nonce: Default::default(),
+        _pad: Default::default(),
+    };
+
+
+    let res = unsafe {
+        libsodium_sys::crypto_secretstream_xchacha20poly1305_init_pull(
+            &mut state,
+            raw_ptr_char_immut!(header),
+            raw_ptr_char_immut!(key),
+        )
+    };
+
+    if res == 0_i32 {
+        return Ok(state);
+    }
+
+    Err(SodokenError::InternalSodium)
+}
