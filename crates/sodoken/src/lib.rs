@@ -20,4 +20,5 @@ pub mod argon2id;
 pub mod blake2b;
 pub mod box_curve25519xchacha20poly1305;
 pub mod random;
+pub mod secretstream_xchacha20poly1305;
 pub mod sign;
