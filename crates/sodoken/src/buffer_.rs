@@ -536,17 +536,17 @@ pub mod buffer {
                 type Target = [u8];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRef<[u8]> for X<'a> {
                 fn as_ref(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> Borrow<[u8]> for X<'a> {
                 fn borrow(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRead<'a> for X<'a> {}
@@ -569,17 +569,17 @@ pub mod buffer {
                 type Target = [u8];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRef<[u8]> for X<'a> {
                 fn as_ref(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> Borrow<[u8]> for X<'a> {
                 fn borrow(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRead<'a> for X<'a> {}
@@ -706,21 +706,21 @@ pub mod buffer {
                 type Target = [u8; N];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> AsRef<[u8; N]> for X<'a, N> {
                 fn as_ref(&self) -> &[u8; N] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> Borrow<[u8; N]> for X<'a, N> {
                 fn borrow(&self) -> &[u8; N] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> AsReadSized<'a, N> for X<'a, N> {}
-            ReadGuardSized(Box::new(X(&self)))
+            ReadGuardSized(Box::new(X(self)))
         }
 
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
