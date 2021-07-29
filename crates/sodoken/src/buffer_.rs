@@ -32,6 +32,12 @@ impl<const S: usize> From<BufWriteSized<S>> for BufRead {
     }
 }
 
+impl<'a> From<&'a [u8]> for BufRead {
+    fn from(b: &'a [u8]) -> Self {
+        b.to_vec().into()
+    }
+}
+
 impl From<Vec<u8>> for BufRead {
     fn from(b: Vec<u8>) -> Self {
         b.into_boxed_slice().into()
@@ -82,6 +88,20 @@ impl<const N: usize> From<[u8; N]> for BufReadSized<N> {
     }
 }
 
+impl<'a, const N: usize> From<&'a [u8]> for BufReadSized<N> {
+    fn from(b: &'a [u8]) -> Self {
+        // the arrayref crate doesn't work with const generics
+        // this code is just coppied / modified to work
+        #[inline]
+        unsafe fn as_array<const N: usize>(slice: &[u8]) -> &[u8; N] {
+            &*(slice.as_ptr() as *const [_; N])
+        }
+        let slice = &b[0..N];
+        let b = *unsafe { as_array(slice) };
+        Self(Arc::new(b))
+    }
+}
+
 impl<const N: usize> BufReadSized<N> {
     /// Construct a new BufReadSized that is NOT mem_locked.
     pub fn new_no_lock(content: [u8; N]) -> BufReadSized<N> {
@@ -128,7 +148,7 @@ impl<const S: usize> From<BufWriteSized<S>> for BufWrite {
 
 impl From<Vec<u8>> for BufWrite {
     fn from(b: Vec<u8>) -> Self {
-        b.into_boxed_slice().into()
+        Self(Arc::new(RwLock::new(b)))
     }
 }
 
@@ -139,9 +159,15 @@ impl From<Box<[u8]>> for BufWrite {
 }
 
 impl BufWrite {
-    /// Consruct a new BufWrite that is NOT mem_locked.
+    /// Construct a new unbound BufWrite that is NOT mem_locked
+    /// and initially has zero length.
+    pub fn new_unbound_no_lock() -> Self {
+        Vec::new().into()
+    }
+
+    /// Construct a new BufWrite that is NOT mem_locked.
     pub fn new_no_lock(size: usize) -> Self {
-        vec![0; size].into()
+        vec![0; size].into_boxed_slice().into()
     }
 
     /// Construct a new BufWrite that IS mem_locked.
@@ -176,6 +202,11 @@ impl BufWrite {
     /// and without changing memory locking strategy.
     pub fn to_read(&self) -> BufRead {
         self.0.clone().into_read()
+    }
+
+    /// Transform this buffer into an extendable type.
+    pub fn to_extend(&self) -> BufExtend {
+        self.0.clone().into_extend()
     }
 }
 
@@ -261,6 +292,23 @@ impl<const N: usize> BufWriteSized<N> {
     }
 }
 
+/// A concrete extendable buffer type that may or may not be mem_locked.
+#[derive(Debug, Clone)]
+pub struct BufExtend(pub Arc<dyn AsBufExtend>);
+
+impl From<BufWrite> for BufExtend {
+    fn from(b: BufWrite) -> Self {
+        b.to_extend()
+    }
+}
+
+impl BufExtend {
+    /// Obtain access to extend the underlying buffer.
+    pub fn extend_lock(&self) -> ExtendGuard<'_> {
+        self.0.extend_lock()
+    }
+}
+
 /// Additional types related to working with buffers.
 pub mod buffer {
     use super::*;
@@ -287,6 +335,19 @@ pub mod buffer {
     pub trait AsWriteSized<'a, const N: usize>:
         'a + AsReadSized<'a, N> + DerefMut + AsMut<[u8; N]> + BorrowMut<[u8; N]>
     {
+    }
+
+    /// Indicates we can append bytes without pre-initializing them.
+    pub trait AsExtendMut<'a>: 'a {
+        /// # Safety
+        ///
+        /// this is unsafe because the process could potentially
+        /// - read uninitialized data from the returned slice
+        /// - or fail to initialize the data in the returned slice
+        unsafe fn unsafe_extend_mut(
+            &mut self,
+            len: usize,
+        ) -> SodokenResult<&mut [u8]>;
     }
 
     /// A read guard, indicating we have gained access to read buffer memory.
@@ -431,6 +492,23 @@ pub mod buffer {
     impl<'a, const N: usize> AsReadSized<'a, N> for WriteGuardSized<'a, N> {}
     impl<'a, const N: usize> AsWriteSized<'a, N> for WriteGuardSized<'a, N> {}
 
+    /// An extend guard, indicating we have gained access to extend the buffer.
+    pub struct ExtendGuard<'a>(pub Box<dyn 'a + AsExtendMut<'a>>);
+
+    impl<'a> ExtendGuard<'a> {
+        /// # Safety
+        ///
+        /// this is unsafe because the process could potentially
+        /// - read uninitialized data from the returned slice
+        /// - or fail to initialize the data in the returned slice
+        pub unsafe fn unsafe_extend_mut(
+            &mut self,
+            len: usize,
+        ) -> SodokenResult<&mut [u8]> {
+            self.0.unsafe_extend_mut(len)
+        }
+    }
+
     /// A readable buffer that may or may not be mem_locked.
     pub trait AsBufRead: 'static + Debug + Send + Sync {
         /// The length of this buffer.
@@ -458,17 +536,17 @@ pub mod buffer {
                 type Target = [u8];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRef<[u8]> for X<'a> {
                 fn as_ref(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> Borrow<[u8]> for X<'a> {
                 fn borrow(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRead<'a> for X<'a> {}
@@ -491,17 +569,17 @@ pub mod buffer {
                 type Target = [u8];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRef<[u8]> for X<'a> {
                 fn as_ref(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> Borrow<[u8]> for X<'a> {
                 fn borrow(&self) -> &[u8] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a> AsRead<'a> for X<'a> {}
@@ -520,6 +598,39 @@ pub mod buffer {
 
         fn read_lock(&self) -> ReadGuard<'_> {
             struct X<'a>(RwLockReadGuard<'a, Box<[u8]>>);
+            impl<'a> std::ops::Deref for X<'a> {
+                type Target = [u8];
+
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+            impl<'a> AsRef<[u8]> for X<'a> {
+                fn as_ref(&self) -> &[u8] {
+                    &self.0
+                }
+            }
+            impl<'a> Borrow<[u8]> for X<'a> {
+                fn borrow(&self) -> &[u8] {
+                    &self.0
+                }
+            }
+            impl<'a> AsRead<'a> for X<'a> {}
+            ReadGuard(Box::new(X(self.read())))
+        }
+    }
+
+    impl AsBufRead for RwLock<Vec<u8>> {
+        fn len(&self) -> usize {
+            self.read().len()
+        }
+
+        fn is_empty(&self) -> bool {
+            self.read().is_empty()
+        }
+
+        fn read_lock(&self) -> ReadGuard<'_> {
+            struct X<'a>(RwLockReadGuard<'a, Vec<u8>>);
             impl<'a> std::ops::Deref for X<'a> {
                 type Target = [u8];
 
@@ -595,21 +706,21 @@ pub mod buffer {
                 type Target = [u8; N];
 
                 fn deref(&self) -> &Self::Target {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> AsRef<[u8; N]> for X<'a, N> {
                 fn as_ref(&self) -> &[u8; N] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> Borrow<[u8; N]> for X<'a, N> {
                 fn borrow(&self) -> &[u8; N] {
-                    &self.0
+                    self.0
                 }
             }
             impl<'a, const N: usize> AsReadSized<'a, N> for X<'a, N> {}
-            ReadGuardSized(Box::new(X(&self)))
+            ReadGuardSized(Box::new(X(self)))
         }
 
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
@@ -655,6 +766,32 @@ pub mod buffer {
         /// without cloning internal data
         /// and without changing memory locking strategy.
         fn into_read(self: Arc<Self>) -> BufRead;
+
+        /// Transform this buffer into an extendable type.
+        fn into_extend(self: Arc<Self>) -> BufExtend;
+    }
+
+    /// a fake extend guard that operates over a whole write guard
+    fn write_guard_to_extend_guard(g: WriteGuard<'_>) -> ExtendGuard<'_> {
+        // this lock simulates an extendable buffer
+        // it's not actually unsafe, and we get no performance benefits
+        // because the memory is actually pre-initialized
+        struct G<'a>(WriteGuard<'a>, usize);
+        impl<'a> AsExtendMut<'a> for G<'a> {
+            unsafe fn unsafe_extend_mut(
+                &mut self,
+                len: usize,
+            ) -> SodokenResult<&mut [u8]> {
+                let cur_len = self.1;
+                let new_len = cur_len + len;
+                if new_len > self.0.len() {
+                    return Err(SodokenError::WriteOverflow);
+                }
+                self.1 = new_len;
+                Ok(&mut self.0[cur_len..new_len])
+            }
+        }
+        ExtendGuard(Box::new(G(g, 0)))
     }
 
     impl AsBufWrite for RwLock<Box<[u8]>> {
@@ -700,6 +837,59 @@ pub mod buffer {
         fn into_read(self: Arc<Self>) -> BufRead {
             BufRead(self)
         }
+
+        fn into_extend(self: Arc<Self>) -> BufExtend {
+            BufExtend(self)
+        }
+    }
+
+    impl AsBufWrite for RwLock<Vec<u8>> {
+        fn write_lock(&self) -> WriteGuard<'_> {
+            struct X<'a>(RwLockWriteGuard<'a, Vec<u8>>);
+            impl<'a> std::ops::Deref for X<'a> {
+                type Target = [u8];
+
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+            impl<'a> std::ops::DerefMut for X<'a> {
+                fn deref_mut(&mut self) -> &mut Self::Target {
+                    &mut self.0
+                }
+            }
+            impl<'a> AsRef<[u8]> for X<'a> {
+                fn as_ref(&self) -> &[u8] {
+                    &self.0
+                }
+            }
+            impl<'a> AsMut<[u8]> for X<'a> {
+                fn as_mut(&mut self) -> &mut [u8] {
+                    &mut self.0
+                }
+            }
+            impl<'a> Borrow<[u8]> for X<'a> {
+                fn borrow(&self) -> &[u8] {
+                    &self.0
+                }
+            }
+            impl<'a> BorrowMut<[u8]> for X<'a> {
+                fn borrow_mut(&mut self) -> &mut [u8] {
+                    &mut self.0
+                }
+            }
+            impl<'a> AsRead<'a> for X<'a> {}
+            impl<'a> AsWrite<'a> for X<'a> {}
+            WriteGuard(Box::new(X(self.write())))
+        }
+
+        fn into_read(self: Arc<Self>) -> BufRead {
+            BufRead(self)
+        }
+
+        fn into_extend(self: Arc<Self>) -> BufExtend {
+            BufExtend(self)
+        }
     }
 
     impl<const N: usize> AsBufWrite for RwLock<[u8; N]> {
@@ -744,6 +934,10 @@ pub mod buffer {
 
         fn into_read(self: Arc<Self>) -> BufRead {
             BufRead(self)
+        }
+
+        fn into_extend(self: Arc<Self>) -> BufExtend {
+            BufExtend(self)
         }
     }
 
@@ -811,6 +1005,49 @@ pub mod buffer {
 
         fn into_write_unsized(self: Arc<Self>) -> BufWrite {
             BufWrite(self)
+        }
+    }
+
+    /// A buffer that may be appended to and may or may not be mem_locked.
+    pub trait AsBufExtend: 'static + Debug + Send + Sync {
+        /// Obtain access to extend the underlying buffer.
+        /// Warning: Depending on the underlying data type,
+        /// each new ExtendGuard could be a new cursor... i.e.
+        /// pulling a new extend lock could overwrite previous data.
+        fn extend_lock(&self) -> ExtendGuard<'_>;
+    }
+
+    impl AsBufExtend for RwLock<Box<[u8]>> {
+        fn extend_lock(&self) -> ExtendGuard<'_> {
+            write_guard_to_extend_guard(self.write_lock())
+        }
+    }
+
+    impl<const N: usize> AsBufExtend for RwLock<[u8; N]> {
+        fn extend_lock(&self) -> ExtendGuard<'_> {
+            write_guard_to_extend_guard(self.write_lock())
+        }
+    }
+
+    impl AsBufExtend for RwLock<Vec<u8>> {
+        fn extend_lock(&self) -> ExtendGuard<'_> {
+            struct X<'a>(RwLockWriteGuard<'a, Vec<u8>>);
+            impl<'a> AsExtendMut<'a> for X<'a> {
+                unsafe fn unsafe_extend_mut(
+                    &mut self,
+                    len: usize,
+                ) -> SodokenResult<&mut [u8]> {
+                    let cur_len = self.0.len();
+                    let new_len = cur_len + len;
+                    self.0.reserve(len);
+                    // *this* is actually unsafe
+                    // we're giving potential access to uninitialized data here
+                    self.0.set_len(new_len);
+                    // and here
+                    Ok(&mut self.0[cur_len..new_len])
+                }
+            }
+            ExtendGuard(Box::new(X(self.write())))
         }
     }
 
@@ -1058,6 +1295,16 @@ pub mod buffer {
         fn into_read(self: Arc<Self>) -> BufRead {
             BufRead(self)
         }
+
+        fn into_extend(self: Arc<Self>) -> BufExtend {
+            BufExtend(self)
+        }
+    }
+
+    impl AsBufExtend for BufWriteMemLocked {
+        fn extend_lock(&self) -> ExtendGuard<'_> {
+            write_guard_to_extend_guard(self.write_lock())
+        }
     }
 
     /// This writable buffer type is mem_locked.
@@ -1207,6 +1454,10 @@ pub mod buffer {
         fn into_read(self: Arc<Self>) -> BufRead {
             BufRead(self)
         }
+
+        fn into_extend(self: Arc<Self>) -> BufExtend {
+            BufExtend(self)
+        }
     }
 
     impl<const N: usize> AsBufWriteSized<N> for BufWriteMemLockedSized<N> {
@@ -1261,6 +1512,12 @@ pub mod buffer {
 
         fn into_write_unsized(self: Arc<Self>) -> BufWrite {
             BufWrite(self)
+        }
+    }
+
+    impl<const N: usize> AsBufExtend for BufWriteMemLockedSized<N> {
+        fn extend_lock(&self) -> ExtendGuard<'_> {
+            write_guard_to_extend_guard(self.write_lock())
         }
     }
 }
