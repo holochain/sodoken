@@ -348,6 +348,23 @@ pub mod buffer {
             &mut self,
             len: usize,
         ) -> SodokenResult<&mut [u8]>;
+
+        /// You probably don't want this function... it leads to
+        /// an extra slow initialization step.
+        /// See `unsafe_extend_mut` or `extend_mut_from_slice`.
+        fn extend_mut(&mut self, len: usize) -> SodokenResult<&mut [u8]> {
+            let out = unsafe { self.unsafe_extend_mut(len) }?;
+            out.fill(0);
+            Ok(out)
+        }
+
+        /// Extend this extendable buffer with given slice
+        fn extend_mut_from_slice(&mut self, oth: &[u8]) -> SodokenResult<()> {
+            let len = oth.len();
+            let buf = unsafe { self.unsafe_extend_mut(len) }?;
+            buf.copy_from_slice(oth);
+            Ok(())
+        }
     }
 
     /// A read guard, indicating we have gained access to read buffer memory.
@@ -506,6 +523,21 @@ pub mod buffer {
             len: usize,
         ) -> SodokenResult<&mut [u8]> {
             self.0.unsafe_extend_mut(len)
+        }
+
+        /// You probably don't want this function... it leads to
+        /// an extra slow initialization step.
+        /// See `unsafe_extend_mut` or `extend_mut_from_slice`.
+        pub fn extend_mut(&mut self, len: usize) -> SodokenResult<&mut [u8]> {
+            self.0.extend_mut(len)
+        }
+
+        /// Extend this extendable buffer with given slice
+        pub fn extend_mut_from_slice(
+            &mut self,
+            oth: &[u8],
+        ) -> SodokenResult<()> {
+            self.0.extend_mut_from_slice(oth)
         }
     }
 
