@@ -290,6 +290,11 @@ impl<const N: usize> BufWriteSized<N> {
     pub fn to_write_unsized(&self) -> BufWrite {
         self.0.clone().into_write_unsized()
     }
+
+    /// Transform this buffer into an extendable type.
+    pub fn to_extend(&self) -> BufExtend {
+        self.0.clone().into_extend()
+    }
 }
 
 /// A concrete extendable buffer type that may or may not be mem_locked.
@@ -298,6 +303,12 @@ pub struct BufExtend(pub Arc<dyn AsBufExtend>);
 
 impl From<BufWrite> for BufExtend {
     fn from(b: BufWrite) -> Self {
+        b.to_extend()
+    }
+}
+
+impl<const N: usize> From<BufWriteSized<N>> for BufExtend {
+    fn from(b: BufWriteSized<N>) -> Self {
         b.to_extend()
     }
 }
