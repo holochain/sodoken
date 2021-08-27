@@ -163,6 +163,40 @@ pub(crate) fn crypto_pwhash_argon2id(
     }
 }
 
+pub(crate) fn crypto_kdf_derive_from_key(
+    sub_key: &mut [u8],
+    subkey_id: u64,
+    ctx: &[u8; libsodium_sys::crypto_kdf_CONTEXTBYTES as usize],
+    parent_key: &[u8; libsodium_sys::crypto_kdf_KEYBYTES as usize],
+) -> SodokenResult<()> {
+    if sub_key.len() < libsodium_sys::crypto_kdf_BYTES_MIN as usize
+        || sub_key.len() > libsodium_sys::crypto_kdf_BYTES_MAX as usize
+    {
+        return Err(SodokenError::BadKeySize);
+    }
+
+    // crypto_sign_seed_keypair mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sub_key size - checked above
+    //   - parent_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_kdf_derive_from_key(
+            raw_ptr_char!(sub_key),
+            sub_key.len() as usize,
+            subkey_id,
+            raw_ptr_ichar_immut!(ctx),
+            raw_ptr_char_immut!(parent_key),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
 pub(crate) fn crypto_sign_seed_keypair(
     pub_key: &mut [u8; libsodium_sys::crypto_sign_PUBLICKEYBYTES as usize],
     sec_key: &mut [u8; libsodium_sys::crypto_sign_SECRETKEYBYTES as usize],
