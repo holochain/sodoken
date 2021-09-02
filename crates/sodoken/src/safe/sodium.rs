@@ -197,6 +197,83 @@ pub(crate) fn crypto_kdf_derive_from_key(
     }
 }
 
+pub(crate) fn crypto_kx_keypair(
+    pub_key: &mut [u8; libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize],
+    sec_key: &mut [u8; libsodium_sys::crypto_kx_SECRETKEYBYTES as usize],
+) -> SodokenResult<()> {
+    // crypto_kx_keypair mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - pub_key size - checked above
+    //   - sec_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_kx_keypair(
+            raw_ptr_char!(pub_key),
+            raw_ptr_char!(sec_key),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
+pub(crate) fn crypto_kx_client_session_keys(
+    rx: &mut [u8; libsodium_sys::crypto_kx_SESSIONKEYBYTES as usize],
+    tx: &mut [u8; libsodium_sys::crypto_kx_SESSIONKEYBYTES as usize],
+    client_pk: &[u8; libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize],
+    client_sk: &[u8; libsodium_sys::crypto_kx_SECRETKEYBYTES as usize],
+    server_pk: &[u8; libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize],
+) -> SodokenResult<()> {
+    // crypto_kx_client_session_keys mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_kx_client_session_keys(
+            raw_ptr_char!(rx),
+            raw_ptr_char!(tx),
+            raw_ptr_char_immut!(client_pk),
+            raw_ptr_char_immut!(client_sk),
+            raw_ptr_char_immut!(server_pk),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
+pub(crate) fn crypto_kx_server_session_keys(
+    rx: &mut [u8; libsodium_sys::crypto_kx_SESSIONKEYBYTES as usize],
+    tx: &mut [u8; libsodium_sys::crypto_kx_SESSIONKEYBYTES as usize],
+    server_pk: &[u8; libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize],
+    server_sk: &[u8; libsodium_sys::crypto_kx_SECRETKEYBYTES as usize],
+    client_pk: &[u8; libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize],
+) -> SodokenResult<()> {
+    // crypto_kx_client_session_keys mainly fails from sizes enforced above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_kx_server_session_keys(
+            raw_ptr_char!(rx),
+            raw_ptr_char!(tx),
+            raw_ptr_char_immut!(server_pk),
+            raw_ptr_char_immut!(server_sk),
+            raw_ptr_char_immut!(client_pk),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenError::InternalSodium)
+    }
+}
+
 pub(crate) fn crypto_sign_seed_keypair(
     pub_key: &mut [u8; libsodium_sys::crypto_sign_PUBLICKEYBYTES as usize],
     sec_key: &mut [u8; libsodium_sys::crypto_sign_SECRETKEYBYTES as usize],
