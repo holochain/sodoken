@@ -828,7 +828,7 @@ pub mod buffer {
                 let cur_len = self.1;
                 let new_len = cur_len + len;
                 if new_len > self.0.len() {
-                    return Err(SodokenError::WriteOverflow);
+                    return Err(SodokenErrKind::WriteOverflow.into());
                 }
                 self.1 = new_len;
                 Ok(&mut self.0[cur_len..new_len])

@@ -92,15 +92,15 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn argon2id() -> SodokenResult<()> {
         let pass = BufRead::new_no_lock(b"my passphrase");
-        let salt: BufReadSized<{ argon2id::SALTBYTES }> =
-            BufReadSized::new_no_lock([0xdb; argon2id::SALTBYTES]);
-        let hash = BufWrite::new_no_lock(argon2id::BYTES_MIN);
-        argon2id::hash(
+        let salt: BufReadSized<{ hash::argon2id::SALTBYTES }> =
+            BufReadSized::new_no_lock([0xdb; hash::argon2id::SALTBYTES]);
+        let hash = BufWrite::new_no_lock(hash::argon2id::BYTES_MIN);
+        hash::argon2id::hash(
             hash.clone(),
             pass,
             salt,
-            argon2id::OPSLIMIT_INTERACTIVE,
-            argon2id::MEMLIMIT_INTERACTIVE,
+            hash::argon2id::OPSLIMIT_INTERACTIVE,
+            hash::argon2id::MEMLIMIT_INTERACTIVE,
         )
         .await?;
         assert_eq!(

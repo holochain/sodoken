@@ -3,29 +3,29 @@
 use crate::*;
 
 /// length of sign seed
-pub const SIGN_SEEDBYTES: usize = libsodium_sys::crypto_sign_SEEDBYTES as usize;
+pub const SEEDBYTES: usize = libsodium_sys::crypto_sign_SEEDBYTES as usize;
 
 /// length of sign public key
-pub const SIGN_PUBLICKEYBYTES: usize =
+pub const PUBLICKEYBYTES: usize =
     libsodium_sys::crypto_sign_PUBLICKEYBYTES as usize;
 
 /// length of sign secret key
-pub const SIGN_SECRETKEYBYTES: usize =
+pub const SECRETKEYBYTES: usize =
     libsodium_sys::crypto_sign_SECRETKEYBYTES as usize;
 
 /// length of sign signature
-pub const SIGN_BYTES: usize = libsodium_sys::crypto_sign_BYTES as usize;
+pub const BYTES: usize = libsodium_sys::crypto_sign_BYTES as usize;
 
 /// create an ed25519 signature keypair from a private seed
-pub async fn sign_seed_keypair<P, S, Seed>(
+pub async fn seed_keypair<P, S, Seed>(
     pub_key: P,
     sec_key: S,
     seed: Seed,
 ) -> SodokenResult<()>
 where
-    P: Into<BufWriteSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufWriteSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
-    Seed: Into<BufReadSized<SIGN_SEEDBYTES>> + 'static + Send,
+    P: Into<BufWriteSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SECRETKEYBYTES>> + 'static + Send,
+    Seed: Into<BufReadSized<SEEDBYTES>> + 'static + Send,
 {
     let pub_key = pub_key.into();
     let sec_key = sec_key.into();
@@ -38,10 +38,10 @@ where
 }
 
 /// create an ed25519 signature keypair from entropy
-pub async fn sign_keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
+pub async fn keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: Into<BufWriteSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufWriteSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
+    P: Into<BufWriteSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let pub_key = pub_key.into();
     let sec_key = sec_key.into();
@@ -52,15 +52,15 @@ where
 }
 
 /// create a signature from a signature private key
-pub async fn sign_detached<Sig, M, S>(
+pub async fn detached<Sig, M, S>(
     signature: Sig,
     message: M,
     sec_key: S,
 ) -> SodokenResult<()>
 where
-    Sig: Into<BufWriteSized<SIGN_BYTES>> + 'static + Send,
+    Sig: Into<BufWriteSized<BYTES>> + 'static + Send,
     M: Into<BufRead> + 'static + Send,
-    S: Into<BufReadSized<SIGN_SECRETKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let signature = signature.into();
     let message = message.into();
@@ -101,15 +101,15 @@ where
 }
 
 /// create a signature from a signature private key
-pub async fn sign_verify_detached<Sig, M, P>(
+pub async fn verify_detached<Sig, M, P>(
     signature: Sig,
     message: M,
     pub_key: P,
 ) -> SodokenResult<bool>
 where
-    Sig: Into<BufReadSized<SIGN_BYTES>> + 'static + Send,
+    Sig: Into<BufReadSized<BYTES>> + 'static + Send,
     M: Into<BufRead> + 'static + Send,
-    P: Into<BufReadSized<SIGN_PUBLICKEYBYTES>> + 'static + Send,
+    P: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
 {
     let signature = signature.into();
     let message = message.into();
@@ -159,18 +159,17 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn sign() -> SodokenResult<()> {
-        let pub_: BufWriteSized<{ sign::SIGN_PUBLICKEYBYTES }> =
+        let pub_: BufWriteSized<{ sign::PUBLICKEYBYTES }> =
             BufWriteSized::new_no_lock();
-        let sec: BufWriteSized<{ sign::SIGN_SECRETKEYBYTES }> =
+        let sec: BufWriteSized<{ sign::SECRETKEYBYTES }> =
             BufWriteSized::new_mem_locked().unwrap();
-        let sig: BufWriteSized<{ sign::SIGN_BYTES }> =
-            BufWriteSized::new_no_lock();
+        let sig: BufWriteSized<{ sign::BYTES }> = BufWriteSized::new_no_lock();
         let msg = BufRead::new_no_lock(b"test message");
 
-        sign::sign_keypair(pub_.clone(), sec.clone()).await?;
-        sign::sign_detached(sig.clone(), msg.clone(), sec).await?;
+        sign::keypair(pub_.clone(), sec.clone()).await?;
+        sign::detached(sig.clone(), msg.clone(), sec).await?;
         assert!(
-            sign::sign_verify_detached(sig.clone(), msg.clone(), pub_.clone())
+            sign::verify_detached(sig.clone(), msg.clone(), pub_.clone())
                 .await?
         );
 
@@ -180,35 +179,34 @@ mod tests {
             g[0] = (std::num::Wrapping(g[0]) + std::num::Wrapping(1)).0;
         }
 
-        assert!(!sign::sign_verify_detached(sig, msg, pub_).await?);
+        assert!(!sign::verify_detached(sig, msg, pub_).await?);
 
         Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn sign_seed() -> SodokenResult<()> {
-        let seed: BufReadSized<{ sign::SIGN_SEEDBYTES }> =
-            BufReadSized::new_no_lock([0xdb; sign::SIGN_SEEDBYTES]);
-        let pub_: BufWriteSized<{ sign::SIGN_PUBLICKEYBYTES }> =
+        let seed: BufReadSized<{ sign::SEEDBYTES }> =
+            BufReadSized::new_no_lock([0xdb; sign::SEEDBYTES]);
+        let pub_: BufWriteSized<{ sign::PUBLICKEYBYTES }> =
             BufWriteSized::new_no_lock();
-        let sec: BufWriteSized<{ sign::SIGN_SECRETKEYBYTES }> =
+        let sec: BufWriteSized<{ sign::SECRETKEYBYTES }> =
             BufWriteSized::new_mem_locked().unwrap();
-        let sig: BufWriteSized<{ sign::SIGN_BYTES }> =
-            BufWriteSized::new_no_lock();
+        let sig: BufWriteSized<{ sign::BYTES }> = BufWriteSized::new_no_lock();
         let msg = BufRead::new_no_lock(b"test message");
 
-        sign::sign_seed_keypair(pub_.clone(), sec.clone(), seed).await?;
+        sign::seed_keypair(pub_.clone(), sec.clone(), seed).await?;
         assert_eq!(
             "[58, 28, 40, 195, 57, 146, 138, 152, 205, 130, 156, 8, 219, 48, 231, 103, 104, 100, 171, 188, 98, 19, 196, 30, 190, 195, 143, 136, 78, 73, 226, 59]",
             format!("{:?}", &*pub_.read_lock()),
         );
-        sign::sign_detached(sig.clone(), msg.clone(), sec).await?;
+        sign::detached(sig.clone(), msg.clone(), sec).await?;
         assert_eq!(
             "[191, 44, 78, 57, 143, 164, 177, 39, 117, 147, 1, 26, 116, 228, 103, 73, 119, 177, 10, 232, 28, 247, 91, 156, 193, 13, 148, 168, 220, 138, 2, 130, 182, 178, 3, 230, 178, 201, 33, 92, 185, 186, 10, 28, 68, 60, 243, 143, 104, 37, 3, 17, 26, 52, 214, 240, 134, 30, 60, 199, 231, 64, 98, 6]",
             format!("{:?}", &*sig.read_lock()),
         );
         assert!(
-            sign::sign_verify_detached(sig.clone(), msg.clone(), pub_.clone())
+            sign::verify_detached(sig.clone(), msg.clone(), pub_.clone())
                 .await?
         );
 
@@ -218,7 +216,7 @@ mod tests {
             g[0] = (std::num::Wrapping(g[0]) + std::num::Wrapping(1)).0;
         }
 
-        assert!(!sign::sign_verify_detached(sig, msg, pub_).await?);
+        assert!(!sign::verify_detached(sig, msg, pub_).await?);
 
         Ok(())
     }

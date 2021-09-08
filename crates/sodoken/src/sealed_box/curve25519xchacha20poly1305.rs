@@ -1,39 +1,40 @@
-//! Api functions related to cryptographic box encryption / decryption.
+//! Api functions related to cryptographic box encryption / decryption using
+//! the curve25519xchacha20poly1305 algorithm.
 
 use crate::*;
 
 /// length of box seed
-pub const BOX_SEEDBYTES: usize =
+pub const SEEDBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_SEEDBYTES as usize;
 
 /// length of box public key
-pub const BOX_PUBLICKEYBYTES: usize =
+pub const PUBLICKEYBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES
         as usize;
 
 /// length of box secret key
-pub const BOX_SECRETKEYBYTES: usize =
+pub const SECRETKEYBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES
         as usize;
 
 /// length of box mac
-pub const BOX_MACBYTES: usize =
+pub const MACBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_MACBYTES as usize;
 
 /// length of box nonce
-pub const BOX_NONCEBYTES: usize =
+pub const NONCEBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_NONCEBYTES as usize;
 
 /// create a box curve25519xchacha20poly1305 keypair from a private seed
-pub async fn box_seed_keypair<P, S, Seed>(
+pub async fn seed_keypair<P, S, Seed>(
     pub_key: P,
     sec_key: S,
     seed: Seed,
 ) -> SodokenResult<()>
 where
-    P: Into<BufWriteSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufWriteSized<BOX_SECRETKEYBYTES>> + 'static + Send,
-    Seed: Into<BufReadSized<BOX_SEEDBYTES>> + 'static + Send,
+    P: Into<BufWriteSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SECRETKEYBYTES>> + 'static + Send,
+    Seed: Into<BufReadSized<SEEDBYTES>> + 'static + Send,
 {
     let pub_key = pub_key.into();
     let sec_key = sec_key.into();
@@ -52,10 +53,10 @@ where
 }
 
 /// create a box curve25519xchacha20poly1305 keypair from entropy
-pub async fn box_keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
+pub async fn keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: Into<BufWriteSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufWriteSized<BOX_SECRETKEYBYTES>> + 'static + Send,
+    P: Into<BufWriteSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let pub_key = pub_key.into();
     let sec_key = sec_key.into();
@@ -71,17 +72,17 @@ where
 }
 
 /// encrypt data with box_curve25519xchacha20poly1305_easy
-pub async fn box_easy<N, M, P, S>(
+pub async fn easy<N, M, P, S>(
     nonce: N,
     message: M,
     dest_pub_key: P,
     src_sec_key: S,
 ) -> SodokenResult<BufRead>
 where
-    N: Into<BufReadSized<BOX_NONCEBYTES>> + 'static + Send,
+    N: Into<BufReadSized<NONCEBYTES>> + 'static + Send,
     M: Into<BufRead> + 'static + Send,
-    P: Into<BufReadSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufReadSized<BOX_SECRETKEYBYTES>> + 'static + Send,
+    P: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let nonce = nonce.into();
     let message = message.into();
@@ -104,12 +105,12 @@ where
 }
 
 /// calculate the message len for an easy cipher len
-pub fn box_open_easy_msg_len(cipher_len: usize) -> usize {
-    cipher_len - BOX_MACBYTES
+pub fn open_easy_msg_len(cipher_len: usize) -> usize {
+    cipher_len - MACBYTES
 }
 
 /// decrypt data with box_curve25519xchacha20poly1305_open_easy
-pub async fn box_open_easy<N, M, C, P, S>(
+pub async fn open_easy<N, M, C, P, S>(
     nonce: N,
     message: M,
     cipher: C,
@@ -117,11 +118,11 @@ pub async fn box_open_easy<N, M, C, P, S>(
     dest_sec_key: S,
 ) -> SodokenResult<()>
 where
-    N: Into<BufReadSized<BOX_NONCEBYTES>> + 'static + Send,
+    N: Into<BufReadSized<NONCEBYTES>> + 'static + Send,
     M: Into<BufWrite> + 'static + Send,
     C: Into<BufRead> + 'static + Send,
-    P: Into<BufReadSized<BOX_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufReadSized<BOX_SECRETKEYBYTES>> + 'static + Send,
+    P: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let nonce = nonce.into();
     let message = message.into();
@@ -152,36 +153,36 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_box() -> SodokenResult<()> {
         let nonce: BufReadSized<
-            { box_curve25519xchacha20poly1305::BOX_NONCEBYTES },
+            { sealed_box::curve25519xchacha20poly1305::NONCEBYTES },
         > = BufReadSized::new_no_lock(
-            [0; box_curve25519xchacha20poly1305::BOX_NONCEBYTES],
+            [0; sealed_box::curve25519xchacha20poly1305::NONCEBYTES],
         );
         let src_pub_: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_PUBLICKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let src_sec: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_SECRETKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let dest_pub_: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_PUBLICKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let dest_sec: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_SECRETKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let msg = BufRead::new_no_lock(b"test message");
 
-        box_curve25519xchacha20poly1305::box_keypair(
+        sealed_box::curve25519xchacha20poly1305::keypair(
             src_pub_.clone(),
             src_sec.clone(),
         )
         .await?;
-        box_curve25519xchacha20poly1305::box_keypair(
+        sealed_box::curve25519xchacha20poly1305::keypair(
             dest_pub_.clone(),
             dest_sec.clone(),
         )
         .await?;
 
-        let cipher = box_curve25519xchacha20poly1305::box_easy(
+        let cipher = sealed_box::curve25519xchacha20poly1305::easy(
             nonce.clone(),
             msg.clone(),
             dest_pub_.clone(),
@@ -190,12 +191,13 @@ mod tests {
         .await?;
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        let msg_len = box_curve25519xchacha20poly1305::box_open_easy_msg_len(
-            cipher.read_lock().len(),
-        );
+        let msg_len =
+            sealed_box::curve25519xchacha20poly1305::open_easy_msg_len(
+                cipher.read_lock().len(),
+            );
         let msg2 = BufWrite::new_no_lock(msg_len);
 
-        box_curve25519xchacha20poly1305::box_open_easy(
+        sealed_box::curve25519xchacha20poly1305::open_easy(
             nonce.clone(),
             msg2.clone(),
             cipher.clone(),
@@ -212,48 +214,48 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_box_seed() -> SodokenResult<()> {
         let nonce: BufReadSized<
-            { box_curve25519xchacha20poly1305::BOX_NONCEBYTES },
+            { sealed_box::curve25519xchacha20poly1305::NONCEBYTES },
         > = BufReadSized::new_no_lock(
-            [0; box_curve25519xchacha20poly1305::BOX_NONCEBYTES],
+            [0; sealed_box::curve25519xchacha20poly1305::NONCEBYTES],
         );
         let src_seed: BufReadSized<
-            { box_curve25519xchacha20poly1305::BOX_SEEDBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SEEDBYTES },
         > = BufReadSized::new_no_lock(
-            [0xdb; box_curve25519xchacha20poly1305::BOX_SEEDBYTES],
+            [0xdb; sealed_box::curve25519xchacha20poly1305::SEEDBYTES],
         );
         let src_pub_: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_PUBLICKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let src_sec: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_SECRETKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let dest_seed: BufReadSized<
-            { box_curve25519xchacha20poly1305::BOX_SEEDBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SEEDBYTES },
         > = BufReadSized::new_no_lock(
-            [0xbd; box_curve25519xchacha20poly1305::BOX_SEEDBYTES],
+            [0xbd; sealed_box::curve25519xchacha20poly1305::SEEDBYTES],
         );
         let dest_pub_: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_PUBLICKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let dest_sec: BufWriteSized<
-            { box_curve25519xchacha20poly1305::BOX_SECRETKEYBYTES },
+            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let msg = BufRead::new_no_lock(b"test message");
 
-        box_curve25519xchacha20poly1305::box_seed_keypair(
+        sealed_box::curve25519xchacha20poly1305::seed_keypair(
             src_pub_.clone(),
             src_sec.clone(),
             src_seed.clone(),
         )
         .await?;
-        box_curve25519xchacha20poly1305::box_seed_keypair(
+        sealed_box::curve25519xchacha20poly1305::seed_keypair(
             dest_pub_.clone(),
             dest_sec.clone(),
             dest_seed.clone(),
         )
         .await?;
 
-        let cipher = box_curve25519xchacha20poly1305::box_easy(
+        let cipher = sealed_box::curve25519xchacha20poly1305::easy(
             nonce.clone(),
             msg.clone(),
             dest_pub_.clone(),
@@ -262,12 +264,13 @@ mod tests {
         .await?;
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        let msg_len = box_curve25519xchacha20poly1305::box_open_easy_msg_len(
-            cipher.read_lock().len(),
-        );
+        let msg_len =
+            sealed_box::curve25519xchacha20poly1305::open_easy_msg_len(
+                cipher.read_lock().len(),
+            );
         let msg2 = BufWrite::new_no_lock(msg_len);
 
-        box_curve25519xchacha20poly1305::box_open_easy(
+        sealed_box::curve25519xchacha20poly1305::open_easy(
             nonce.clone(),
             msg2.clone(),
             cipher.clone(),

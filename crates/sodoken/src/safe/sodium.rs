@@ -42,7 +42,7 @@ pub(crate) fn sodium_init() -> SodokenResult<()> {
             return Ok(());
         }
     }
-    Err(SodokenError::InternalSodium)
+    Err(SodokenErrKind::InternalSodium.into())
 }
 
 #[allow(clippy::unnecessary_wraps)]
@@ -67,7 +67,7 @@ pub(crate) fn crypto_generichash(
     if hash.len() < libsodium_sys::crypto_generichash_BYTES_MIN as usize
         || hash.len() > libsodium_sys::crypto_generichash_BYTES_MAX as usize
     {
-        return Err(SodokenError::BadHashSize);
+        return Err(SodokenErrKind::BadHashSize.into());
     }
 
     let (key_len, key) = match key {
@@ -77,7 +77,7 @@ pub(crate) fn crypto_generichash(
                 || key.len()
                     > libsodium_sys::crypto_generichash_KEYBYTES_MAX as usize
             {
-                return Err(SodokenError::BadKeySize);
+                return Err(SodokenErrKind::BadKeySize.into());
             }
             (key.len(), raw_ptr_char_immut!(key))
         }
@@ -105,7 +105,7 @@ pub(crate) fn crypto_generichash(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -117,7 +117,7 @@ pub(crate) fn crypto_pwhash_argon2id(
     mem_limit: usize,
 ) -> SodokenResult<()> {
     if hash.len() < libsodium_sys::crypto_pwhash_argon2id_BYTES_MIN as usize {
-        return Err(SodokenError::BadHashSize);
+        return Err(SodokenErrKind::BadHashSize.into());
     }
 
     if passphrase.len()
@@ -125,17 +125,17 @@ pub(crate) fn crypto_pwhash_argon2id(
         || passphrase.len()
             > libsodium_sys::crypto_pwhash_argon2id_PASSWD_MAX as usize
     {
-        return Err(SodokenError::BadPassphraseSize);
+        return Err(SodokenErrKind::BadPassphraseSize.into());
     }
 
     if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u64
         || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u64
     {
-        return Err(SodokenError::BadOpsLimit);
+        return Err(SodokenErrKind::BadOpsLimit.into());
     }
 
     if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as usize {
-        return Err(SodokenError::BadMemLimit);
+        return Err(SodokenErrKind::BadMemLimit.into());
     }
 
     // crypto_pwhash can error lots of bad sizes
@@ -159,7 +159,7 @@ pub(crate) fn crypto_pwhash_argon2id(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -172,7 +172,7 @@ pub(crate) fn crypto_kdf_derive_from_key(
     if sub_key.len() < libsodium_sys::crypto_kdf_BYTES_MIN as usize
         || sub_key.len() > libsodium_sys::crypto_kdf_BYTES_MAX as usize
     {
-        return Err(SodokenError::BadKeySize);
+        return Err(SodokenErrKind::BadKeySize.into());
     }
 
     // crypto_sign_seed_keypair mainly fails from sizes enforced above
@@ -193,7 +193,7 @@ pub(crate) fn crypto_kdf_derive_from_key(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -216,7 +216,7 @@ pub(crate) fn crypto_kx_keypair(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -243,7 +243,7 @@ pub(crate) fn crypto_kx_client_session_keys(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -270,7 +270,7 @@ pub(crate) fn crypto_kx_server_session_keys(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -296,7 +296,7 @@ pub(crate) fn crypto_sign_seed_keypair(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -319,7 +319,7 @@ pub(crate) fn crypto_sign_keypair(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -346,7 +346,7 @@ pub(crate) fn crypto_sign_detached(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -396,7 +396,7 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_seed_keypair(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -419,7 +419,7 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_keypair(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -463,7 +463,7 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_easy(
         {
             return Ok(cipher);
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
@@ -485,7 +485,7 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_open_easy(
             as usize;
 
     if message.len() != msg_len {
-        return Err(SodokenError::BadMessageSize);
+        return Err(SodokenErrKind::BadMessageSize.into());
     }
 
     // crypto_box_curve25519xchacha20poly1305_open_easy mainly failes from sized checked above
@@ -510,11 +510,11 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_open_easy(
         {
             return Ok(());
         }
-        Err(SodokenError::InternalSodium)
+        Err(SodokenErrKind::InternalSodium.into())
     }
 }
 
-use crate::secretstream_xchacha20poly1305::SecretStreamTag;
+use crate::secretstream::xchacha20poly1305::SecretStreamTag;
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
     key: &[u8; libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES
@@ -549,7 +549,7 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
         return Ok(state);
     }
 
-    Err(SodokenError::InternalSodium)
+    Err(SodokenErrKind::InternalSodium.into())
 }
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_push(
@@ -594,7 +594,7 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_push(
         return Ok(());
     }
 
-    Err(SodokenError::InternalSodium)
+    Err(SodokenErrKind::InternalSodium.into())
 }
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_init_pull(
@@ -627,7 +627,7 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_init_pull(
         return Ok(state);
     }
 
-    Err(SodokenError::InternalSodium)
+    Err(SodokenErrKind::InternalSodium.into())
 }
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_pull(
@@ -675,13 +675,13 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_pull(
             libsodium_sys::crypto_secretstream_xchacha20poly1305_TAG_PUSH => SecretStreamTag::Push,
             libsodium_sys::crypto_secretstream_xchacha20poly1305_TAG_REKEY => SecretStreamTag::Rekey,
             libsodium_sys::crypto_secretstream_xchacha20poly1305_TAG_FINAL => SecretStreamTag::Final,
-            _ => return Err(SodokenError::InternalSodium),
+            _ => return Err(SodokenErrKind::InternalSodium.into()),
         };
 
         return Ok(tag);
     }
 
-    Err(SodokenError::InternalSodium)
+    Err(SodokenErrKind::InternalSodium.into())
 }
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_rekey(

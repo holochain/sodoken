@@ -3,7 +3,7 @@
 use crate::*;
 
 /// Fill a buffer with cryptographically secure randomness
-pub async fn randombytes_buf<B>(buf: B) -> SodokenResult<()>
+pub async fn bytes_buf<B>(buf: B) -> SodokenResult<()>
 where
     B: Into<BufWrite> + 'static + Send,
 {
@@ -49,7 +49,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn randombytes_buf() -> SodokenResult<()> {
         let buf = BufWrite::new_no_lock(32);
-        random::randombytes_buf(buf.clone()).await?;
+        random::bytes_buf(buf.clone()).await?;
         let data = buf.read_lock().to_vec();
         assert_ne!(&vec![0; 32], &data);
 
