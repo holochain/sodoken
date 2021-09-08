@@ -3,22 +3,21 @@
 use crate::*;
 
 /// Byte length of kdf "context" parameter.
-pub const KDF_CONTEXTBYTES: usize =
-    libsodium_sys::crypto_kdf_CONTEXTBYTES as usize;
+pub const CONTEXTBYTES: usize = libsodium_sys::crypto_kdf_CONTEXTBYTES as usize;
 
 /// Byte length of kdf "parent" key.
-pub const KDF_KEYBYTES: usize = libsodium_sys::crypto_kdf_KEYBYTES as usize;
+pub const KEYBYTES: usize = libsodium_sys::crypto_kdf_KEYBYTES as usize;
 
 /// Derive a subkey from a parent key.
 pub fn derive_from_key<S, P>(
     sub_key: S,
     subkey_id: u64,
-    ctx: [u8; KDF_CONTEXTBYTES],
+    ctx: [u8; CONTEXTBYTES],
     parent_key: P,
 ) -> SodokenResult<()>
 where
     S: Into<BufWrite> + 'static + Send,
-    P: Into<BufReadSized<KDF_KEYBYTES>> + 'static + Send,
+    P: Into<BufReadSized<KEYBYTES>> + 'static + Send,
 {
     let sub_key = sub_key.into();
     let parent_key = parent_key.into();

@@ -3,22 +3,22 @@
 use crate::*;
 
 /// Byte length of kx public key.
-pub const KX_PUBLICKEYBYTES: usize =
+pub const PUBLICKEYBYTES: usize =
     libsodium_sys::crypto_kx_PUBLICKEYBYTES as usize;
 
 /// Byte length of kx secret key.
-pub const KX_SECRETKEYBYTES: usize =
+pub const SECRETKEYBYTES: usize =
     libsodium_sys::crypto_kx_SECRETKEYBYTES as usize;
 
 /// Byte length of kx session key.
-pub const KX_SESSIONKEYBYTES: usize =
+pub const SESSIONKEYBYTES: usize =
     libsodium_sys::crypto_kx_SESSIONKEYBYTES as usize;
 
 /// Generate a key exchange keypair.
 pub fn keypair<P, S>(pub_key: P, sec_key: S) -> SodokenResult<()>
 where
-    P: Into<BufWriteSized<KX_PUBLICKEYBYTES>> + 'static + Send,
-    S: Into<BufWriteSized<KX_SECRETKEYBYTES>> + 'static + Send,
+    P: Into<BufWriteSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufWriteSized<SECRETKEYBYTES>> + 'static + Send,
 {
     let pub_key = pub_key.into();
     let sec_key = sec_key.into();
@@ -38,11 +38,11 @@ pub fn client_session_keys<R, T, CPub, CSec, SPub>(
     server_pk: SPub,
 ) -> SodokenResult<()>
 where
-    R: Into<BufWriteSized<KX_SESSIONKEYBYTES>> + 'static + Send,
-    T: Into<BufWriteSized<KX_SESSIONKEYBYTES>> + 'static + Send,
-    CPub: Into<BufReadSized<KX_PUBLICKEYBYTES>> + 'static + Send,
-    CSec: Into<BufReadSized<KX_SECRETKEYBYTES>> + 'static + Send,
-    SPub: Into<BufReadSized<KX_PUBLICKEYBYTES>> + 'static + Send,
+    R: Into<BufWriteSized<SESSIONKEYBYTES>> + 'static + Send,
+    T: Into<BufWriteSized<SESSIONKEYBYTES>> + 'static + Send,
+    CPub: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+    CSec: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
+    SPub: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
 {
     let rx = rx.into();
     let tx = tx.into();
@@ -70,11 +70,11 @@ pub fn server_session_keys<R, T, SPub, SSec, CPub>(
     client_pk: CPub,
 ) -> SodokenResult<()>
 where
-    R: Into<BufWriteSized<KX_SESSIONKEYBYTES>> + 'static + Send,
-    T: Into<BufWriteSized<KX_SESSIONKEYBYTES>> + 'static + Send,
-    SPub: Into<BufReadSized<KX_PUBLICKEYBYTES>> + 'static + Send,
-    SSec: Into<BufReadSized<KX_SECRETKEYBYTES>> + 'static + Send,
-    CPub: Into<BufReadSized<KX_PUBLICKEYBYTES>> + 'static + Send,
+    R: Into<BufWriteSized<SESSIONKEYBYTES>> + 'static + Send,
+    T: Into<BufWriteSized<SESSIONKEYBYTES>> + 'static + Send,
+    SPub: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+    SSec: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
+    CPub: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
 {
     let rx = rx.into();
     let tx = tx.into();

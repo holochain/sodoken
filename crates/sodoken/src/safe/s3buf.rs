@@ -57,7 +57,7 @@ impl S3Buf {
             let align_size = (size + 7) & !7;
             let z = libsodium_sys::sodium_malloc(align_size);
             if z.is_null() {
-                return Err(SodokenError::AllocationFailed);
+                return Err(SodokenErrKind::AllocationFailed.into());
             }
             libsodium_sys::sodium_memzero(z, align_size);
             libsodium_sys::sodium_mprotect_noaccess(z);

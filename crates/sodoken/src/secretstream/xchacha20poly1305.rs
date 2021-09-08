@@ -1,13 +1,14 @@
-//! Api functions related to secret stream encryption / decryption.
+//! Api functions related to secret stream encryption / decryption using
+//! the xchacha20poly1305 algorithm.
 
 use crate::*;
 
 /// Length of secretstream key.
-pub const SECRETSTREAM_KEYBYTES: usize =
+pub const KEYBYTES: usize =
     libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES as usize;
 
 /// Length of secretstream header bytes.
-pub const SECRETSTREAM_HEADERBYTES: usize =
+pub const HEADERBYTES: usize =
     libsodium_sys::crypto_secretstream_xchacha20poly1305_HEADERBYTES as usize;
 
 /// A structure to facilitate secretstream encryption.
@@ -40,7 +41,7 @@ impl SecretStreamEncrypt {
     /// Also returns the encryption header bytes.
     pub fn new<K, H>(key: K, header: H) -> SodokenResult<Self>
     where
-        K: Into<BufReadSized<SECRETSTREAM_KEYBYTES>> + 'static + Send,
+        K: Into<BufReadSized<KEYBYTES>> + 'static + Send,
         H: Into<BufExtend> + 'static + Send,
     {
         let key = key.into();
@@ -202,8 +203,8 @@ impl SecretStreamDecrypt {
     /// Also returns the encryption header bytes.
     pub fn new<K, H>(key: K, header: H) -> SodokenResult<Self>
     where
-        K: Into<BufReadSized<SECRETSTREAM_KEYBYTES>> + 'static + Send,
-        H: Into<BufReadSized<SECRETSTREAM_HEADERBYTES>> + 'static + Send,
+        K: Into<BufReadSized<KEYBYTES>> + 'static + Send,
+        H: Into<BufReadSized<HEADERBYTES>> + 'static + Send,
     {
         let key = key.into();
         let header = header.into();
@@ -291,14 +292,14 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_secretstream() -> SodokenResult<()> {
-        use secretstream_xchacha20poly1305::*;
+        use secretstream::xchacha20poly1305::*;
 
         let key = BufWriteSized::new_no_lock();
         let cipher = BufWrite::new_unbound_no_lock();
 
         let mut enc = SecretStreamEncrypt::new(key.clone(), cipher.clone())?;
         let header_len = cipher.len();
-        assert_eq!(SECRETSTREAM_HEADERBYTES, header_len);
+        assert_eq!(HEADERBYTES, header_len);
 
         enc.push_message(
             b"test-msg".to_vec(),
@@ -307,7 +308,7 @@ mod tests {
         )
         .await?;
         let test_msg_len = cipher.len();
-        assert_eq!(SECRETSTREAM_HEADERBYTES + 25, test_msg_len);
+        assert_eq!(HEADERBYTES + 25, test_msg_len);
 
         // test rekeying after the first "Message".
         enc.rekey();
@@ -319,7 +320,7 @@ mod tests {
         )
         .await?;
         let test_push_len = cipher.len();
-        assert_eq!(SECRETSTREAM_HEADERBYTES + 51, test_push_len);
+        assert_eq!(HEADERBYTES + 51, test_push_len);
 
         enc.push_rekey(
             b"test-rekey".to_vec(),
@@ -328,7 +329,7 @@ mod tests {
         )
         .await?;
         let test_rekey_len = cipher.len();
-        assert_eq!(SECRETSTREAM_HEADERBYTES + 78, test_rekey_len);
+        assert_eq!(HEADERBYTES + 78, test_rekey_len);
 
         enc.push_final(
             b"test-final".to_vec(),
@@ -337,7 +338,7 @@ mod tests {
         )
         .await?;
         let test_final_len = cipher.len();
-        assert_eq!(SECRETSTREAM_HEADERBYTES + 105, test_final_len);
+        assert_eq!(HEADERBYTES + 105, test_final_len);
 
         println!(
             "cipher len: {} {:?}",

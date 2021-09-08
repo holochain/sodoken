@@ -107,8 +107,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn blake2b() -> SodokenResult<()> {
         let msg = BufRead::new_no_lock(b"test message");
-        let hash = BufWrite::new_no_lock(blake2b::BYTES_MIN);
-        blake2b::hash(hash.clone(), msg.clone()).await?;
+        let hash = BufWrite::new_no_lock(hash::blake2b::BYTES_MIN);
+        hash::blake2b::hash(hash.clone(), msg.clone()).await?;
         assert_eq!(
             "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
             format!("{:?}", &*hash.read_lock()),
