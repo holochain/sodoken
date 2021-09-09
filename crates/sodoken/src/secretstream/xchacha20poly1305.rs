@@ -7,6 +7,10 @@ use crate::*;
 pub const KEYBYTES: usize =
     libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES as usize;
 
+/// Additional byte count required for cipher buffers above message length.
+pub const ABYTES: usize =
+    libsodium_sys::crypto_secretstream_xchacha20poly1305_ABYTES as usize;
+
 /// Length of secretstream header bytes.
 pub const HEADERBYTES: usize =
     libsodium_sys::crypto_secretstream_xchacha20poly1305_HEADERBYTES as usize;
@@ -295,7 +299,7 @@ mod tests {
         use secretstream::xchacha20poly1305::*;
 
         let key = BufWriteSized::new_no_lock();
-        let cipher = BufWrite::new_unbound_no_lock();
+        let cipher = BufExtend::new_no_lock(0);
 
         let mut enc = SecretStreamEncrypt::new(key.clone(), cipher.clone())?;
         let header_len = cipher.len();
@@ -350,7 +354,7 @@ mod tests {
             key,
             BufReadSized::from(&cipher.read_lock()[0..header_len]),
         )?;
-        let msg = BufWrite::new_unbound_no_lock();
+        let msg = BufExtend::new_no_lock(0);
 
         let tag = dec
             .pull(

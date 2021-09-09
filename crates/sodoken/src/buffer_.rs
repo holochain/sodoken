@@ -159,12 +159,6 @@ impl From<Box<[u8]>> for BufWrite {
 }
 
 impl BufWrite {
-    /// Construct a new unbound BufWrite that is NOT mem_locked
-    /// and initially has zero length.
-    pub fn new_unbound_no_lock() -> Self {
-        Vec::new().into()
-    }
-
     /// Construct a new BufWrite that is NOT mem_locked.
     pub fn new_no_lock(size: usize) -> Self {
         vec![0; size].into_boxed_slice().into()
@@ -313,10 +307,49 @@ impl<const N: usize> From<BufWriteSized<N>> for BufExtend {
     }
 }
 
+impl From<Vec<u8>> for BufExtend {
+    fn from(b: Vec<u8>) -> Self {
+        Self(Arc::new(RwLock::new(b)))
+    }
+}
+
 impl BufExtend {
+    /// Construct a new extendable buffer with given capacity.
+    /// It's ok / still fairly efficient to set this to zero.
+    pub fn new_no_lock(initial_capacity: usize) -> Self {
+        Vec::with_capacity(initial_capacity).into()
+    }
+
     /// Obtain access to extend the underlying buffer.
     pub fn extend_lock(&self) -> ExtendGuard<'_> {
         self.0.extend_lock()
+    }
+
+    /// The length of this buffer.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Is this buffer empty?
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Obtain read access to the underlying buffer.
+    pub fn read_lock(&self) -> ReadGuard<'_> {
+        self.0.read_lock()
+    }
+
+    /// Obtain write access to the underlying buffer.
+    pub fn write_lock(&self) -> WriteGuard<'_> {
+        self.0.write_lock()
+    }
+
+    /// Downgrade this to a read-only reference
+    /// without cloning internal data
+    /// and without changing memory locking strategy.
+    pub fn to_read(&self) -> BufRead {
+        self.0.clone().into_read()
     }
 }
 
@@ -1052,7 +1085,7 @@ pub mod buffer {
     }
 
     /// A buffer that may be appended to and may or may not be mem_locked.
-    pub trait AsBufExtend: 'static + Debug + Send + Sync {
+    pub trait AsBufExtend: AsBufWrite {
         /// Obtain access to extend the underlying buffer.
         /// Warning: Depending on the underlying data type,
         /// each new ExtendGuard could be a new cursor... i.e.
