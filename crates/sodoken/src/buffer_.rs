@@ -70,6 +70,13 @@ impl BufRead {
     pub fn read_lock(&self) -> ReadGuard<'_> {
         self.0.read_lock()
     }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
+        self.0.try_unwrap()
+    }
 }
 
 /// A concrete sized read-only buffer type that may or may not be mem_locked.
@@ -133,6 +140,13 @@ impl<const N: usize> BufReadSized<N> {
     /// and without changing memory locking strategy.
     pub fn to_read_unsized(&self) -> BufRead {
         self.0.clone().into_read_unsized()
+    }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
+        self.0.try_unwrap()
     }
 }
 
@@ -201,6 +215,13 @@ impl BufWrite {
     /// Transform this buffer into an extendable type.
     pub fn to_extend(&self) -> BufExtend {
         self.0.clone().into_extend()
+    }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
+        self.0.try_unwrap()
     }
 }
 
@@ -289,6 +310,13 @@ impl<const N: usize> BufWriteSized<N> {
     pub fn to_extend(&self) -> BufExtend {
         self.0.clone().into_extend()
     }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
+        self.0.try_unwrap()
+    }
 }
 
 /// A concrete extendable buffer type that may or may not be mem_locked.
@@ -350,6 +378,13 @@ impl BufExtend {
     /// and without changing memory locking strategy.
     pub fn to_read(&self) -> BufRead {
         self.0.clone().into_read()
+    }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
+        self.0.try_unwrap()
     }
 }
 
@@ -595,6 +630,11 @@ pub mod buffer {
 
         /// Obtain read access to the underlying buffer.
         fn read_lock(&self) -> ReadGuard<'_>;
+
+        /// Attempt to extract the inner contents of this buf without cloning.
+        /// If this memory is locked or there are clones of this reference,
+        /// the unwrap will fail, returning a BufRead instance.
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead>;
     }
 
     impl AsBufRead for Box<[u8]> {
@@ -627,6 +667,13 @@ pub mod buffer {
             }
             impl<'a> AsRead<'a> for X<'a> {}
             ReadGuard(Box::new(X(&self[..])))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r),
+                Err(s) => Err(BufRead(s)),
+            }
         }
     }
 
@@ -661,6 +708,13 @@ pub mod buffer {
             impl<'a> AsRead<'a> for X<'a> {}
             ReadGuard(Box::new(X(&self[..])))
         }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r.into()),
+                Err(s) => Err(BufRead(s)),
+            }
+        }
     }
 
     impl AsBufRead for RwLock<Box<[u8]>> {
@@ -693,6 +747,13 @@ pub mod buffer {
             }
             impl<'a> AsRead<'a> for X<'a> {}
             ReadGuard(Box::new(X(self.read())))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r.into_inner()),
+                Err(s) => Err(BufRead(s)),
+            }
         }
     }
 
@@ -727,6 +788,13 @@ pub mod buffer {
             impl<'a> AsRead<'a> for X<'a> {}
             ReadGuard(Box::new(X(self.read())))
         }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r.into_inner().into()),
+                Err(s) => Err(BufRead(s)),
+            }
+        }
     }
 
     impl<const N: usize> AsBufRead for RwLock<[u8; N]> {
@@ -759,6 +827,13 @@ pub mod buffer {
             }
             impl<'a, const N: usize> AsRead<'a> for X<'a, N> {}
             ReadGuard(Box::new(X(self.read())))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r.into_inner().into()),
+                Err(s) => Err(BufRead(s)),
+            }
         }
     }
 
@@ -1175,6 +1250,11 @@ pub mod buffer {
             g.set_readable();
             ReadGuard(Box::new(X(g)))
         }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufRead(self))
+        }
     }
 
     /// This sized read-only buffer type is mem_locked.
@@ -1225,6 +1305,11 @@ pub mod buffer {
             g.set_readable();
             let x: X<N> = X(g);
             ReadGuard(Box::new(x))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufRead(self))
         }
     }
 
@@ -1319,6 +1404,11 @@ pub mod buffer {
             let g = self.0.lock();
             g.set_readable();
             ReadGuard(Box::new(X(g)))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufRead(self))
         }
     }
 
@@ -1442,6 +1532,11 @@ pub mod buffer {
             g.set_readable();
             let x: X<N> = X(g);
             ReadGuard(Box::new(x))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufRead(self))
         }
     }
 
