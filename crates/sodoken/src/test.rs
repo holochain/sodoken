@@ -33,3 +33,23 @@ fn test_try_unwrap() {
     locked.write_lock().copy_from_slice(b"test");
     ok(locked).unwrap_err();
 }
+
+#[test]
+fn test_try_unwrap_sized() {
+    fn ok<B: Into<BufReadSized<4>>>(b: B) -> SodokenResult<()> {
+        match b.into().try_unwrap_sized() {
+            Ok(b) => {
+                assert_eq!(b"test", &b);
+                Ok(())
+            }
+            Err(_) => Err("unwrap fail".into()),
+        }
+    }
+
+    ok(<BufReadSized<4>>::from(*b"test")).unwrap();
+    ok(<BufWriteSized<4>>::from(*b"test")).unwrap();
+
+    let locked = <BufWriteSized<4>>::new_mem_locked().unwrap();
+    locked.write_lock().copy_from_slice(b"test");
+    ok(locked).unwrap_err();
+}

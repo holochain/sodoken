@@ -148,6 +148,13 @@ impl<const N: usize> BufReadSized<N> {
     pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
         self.0.try_unwrap()
     }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap_sized(self) -> Result<[u8; N], BufReadSized<N>> {
+        self.0.try_unwrap_sized()
+    }
 }
 
 /// A concrete writable buffer type that may or may not be mem_locked.
@@ -316,6 +323,13 @@ impl<const N: usize> BufWriteSized<N> {
     /// the unwrap will fail, returning a BufRead instance.
     pub fn try_unwrap(self) -> Result<Box<[u8]>, BufRead> {
         self.0.try_unwrap()
+    }
+
+    /// Attempt to extract the inner contents of this buf without cloning.
+    /// If this memory is locked or there are clones of this reference,
+    /// the unwrap will fail, returning a BufRead instance.
+    pub fn try_unwrap_sized(self) -> Result<[u8; N], BufReadSized<N>> {
+        self.0.try_unwrap_sized()
     }
 }
 
@@ -848,6 +862,13 @@ pub mod buffer {
         /// without cloning internal data
         /// and without changing memory locking strategy.
         fn into_read_unsized(self: Arc<Self>) -> BufRead;
+
+        /// Attempt to extract the inner contents of this buf without cloning.
+        /// If this memory is locked or there are clones of this reference,
+        /// the unwrap will fail, returning a BufRead instance.
+        fn try_unwrap_sized(
+            self: Arc<Self>,
+        ) -> Result<[u8; N], BufReadSized<N>>;
     }
 
     impl<const N: usize> AsBufReadSized<N> for [u8; N] {
@@ -877,6 +898,15 @@ pub mod buffer {
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
             BufRead(self)
         }
+
+        fn try_unwrap_sized(
+            self: Arc<Self>,
+        ) -> Result<[u8; N], BufReadSized<N>> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r),
+                Err(s) => Err(BufReadSized(s)),
+            }
+        }
     }
 
     impl<const N: usize> AsBufReadSized<N> for RwLock<[u8; N]> {
@@ -905,6 +935,15 @@ pub mod buffer {
 
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
             BufRead(self)
+        }
+
+        fn try_unwrap_sized(
+            self: Arc<Self>,
+        ) -> Result<[u8; N], BufReadSized<N>> {
+            match Arc::try_unwrap(self) {
+                Ok(r) => Ok(r.into_inner()),
+                Err(s) => Err(BufReadSized(s)),
+            }
         }
     }
 
@@ -1346,6 +1385,13 @@ pub mod buffer {
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
             BufRead(self)
         }
+
+        fn try_unwrap_sized(
+            self: Arc<Self>,
+        ) -> Result<[u8; N], BufReadSized<N>> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufReadSized(self))
+        }
     }
 
     /// This writable buffer type is mem_locked.
@@ -1572,6 +1618,13 @@ pub mod buffer {
 
         fn into_read_unsized(self: Arc<Self>) -> BufRead {
             BufRead(self)
+        }
+
+        fn try_unwrap_sized(
+            self: Arc<Self>,
+        ) -> Result<[u8; N], BufReadSized<N>> {
+            // cannot extract contents of memlocked data without cloning
+            Err(BufReadSized(self))
         }
     }
 
