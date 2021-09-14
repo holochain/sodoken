@@ -1,4 +1,5 @@
 use crate::*;
+use std::sync::Arc;
 
 #[test]
 fn test_buffer_extend() {
@@ -46,6 +47,7 @@ fn test_try_unwrap_sized() {
         }
     }
 
+    ok(<BufReadSized<4>>::from(<Arc<[u8; 4]>>::from(*b"test"))).unwrap();
     ok(<BufReadSized<4>>::from(*b"test")).unwrap();
     ok(<BufWriteSized<4>>::from(*b"test")).unwrap();
 

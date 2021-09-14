@@ -50,6 +50,13 @@ impl From<Box<[u8]>> for BufRead {
     }
 }
 
+impl From<Arc<[u8]>> for BufRead {
+    fn from(b: Arc<[u8]>) -> Self {
+        // yes, we have to double arc this to make it work...
+        Self(Arc::new(b))
+    }
+}
+
 impl BufRead {
     /// Consruct a new BufRead that is NOT mem_locked.
     pub fn new_no_lock(content: &[u8]) -> Self {
@@ -92,6 +99,12 @@ impl<const S: usize> From<BufWriteSized<S>> for BufReadSized<S> {
 impl<const N: usize> From<[u8; N]> for BufReadSized<N> {
     fn from(b: [u8; N]) -> Self {
         Self(Arc::new(b))
+    }
+}
+
+impl<const N: usize> From<Arc<[u8; N]>> for BufReadSized<N> {
+    fn from(b: Arc<[u8; N]>) -> Self {
+        Self(b)
     }
 }
 
@@ -649,6 +662,45 @@ pub mod buffer {
         /// If this memory is locked or there are clones of this reference,
         /// the unwrap will fail, returning a BufRead instance.
         fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead>;
+    }
+
+    impl AsBufRead for Arc<[u8]> {
+        fn len(&self) -> usize {
+            self.as_ref().len()
+        }
+
+        fn is_empty(&self) -> bool {
+            self.as_ref().is_empty()
+        }
+
+        fn read_lock(&self) -> ReadGuard<'_> {
+            struct X<'a>(&'a [u8]);
+            impl<'a> std::ops::Deref for X<'a> {
+                type Target = [u8];
+
+                fn deref(&self) -> &Self::Target {
+                    self.0
+                }
+            }
+            impl<'a> AsRef<[u8]> for X<'a> {
+                fn as_ref(&self) -> &[u8] {
+                    self.0
+                }
+            }
+            impl<'a> Borrow<[u8]> for X<'a> {
+                fn borrow(&self) -> &[u8] {
+                    self.0
+                }
+            }
+            impl<'a> AsRead<'a> for X<'a> {}
+            ReadGuard(Box::new(X(&self[..])))
+        }
+
+        fn try_unwrap(self: Arc<Self>) -> Result<Box<[u8]>, BufRead> {
+            // cannot extract contents of Arc<[u8]> without cloning
+            // the douple Arc::try_unwrap leads to an unsized stack issue...
+            Err(BufRead(self))
+        }
     }
 
     impl AsBufRead for Box<[u8]> {
