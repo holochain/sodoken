@@ -113,8 +113,8 @@ pub(crate) fn crypto_pwhash_argon2id(
     hash: &mut [u8],
     passphrase: &[u8],
     salt: &[u8; libsodium_sys::crypto_pwhash_argon2id_SALTBYTES as usize],
-    ops_limit: u64,
-    mem_limit: usize,
+    ops_limit: u32,
+    mem_limit: u32,
 ) -> SodokenResult<()> {
     if hash.len() < libsodium_sys::crypto_pwhash_argon2id_BYTES_MIN as usize {
         return Err(SodokenErrKind::BadHashSize.into());
@@ -128,13 +128,13 @@ pub(crate) fn crypto_pwhash_argon2id(
         return Err(SodokenErrKind::BadPassphraseSize.into());
     }
 
-    if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u64
-        || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u64
+    if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u32
+        || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u32
     {
         return Err(SodokenErrKind::BadOpsLimit.into());
     }
 
-    if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as usize {
+    if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as u32 {
         return Err(SodokenErrKind::BadMemLimit.into());
     }
 
@@ -152,8 +152,8 @@ pub(crate) fn crypto_pwhash_argon2id(
             raw_ptr_ichar_immut!(passphrase),
             passphrase.len() as libc::c_ulonglong,
             raw_ptr_char_immut!(salt),
-            ops_limit,
-            mem_limit,
+            ops_limit as u64,
+            mem_limit as usize,
             libsodium_sys::crypto_pwhash_argon2id_ALG_ARGON2ID13 as libc::c_int,
         ) == 0_i32
         {

@@ -19,48 +19,48 @@ pub const PASSWD_MAX: usize =
     libsodium_sys::crypto_pwhash_argon2id_PASSWD_MAX as usize;
 
 /// argon2id pwhash min ops limit
-pub const OPSLIMIT_MIN: u64 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u64;
+pub const OPSLIMIT_MIN: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u32;
 
 /// argon2id pwhash interactive ops limit
-pub const OPSLIMIT_INTERACTIVE: u64 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_INTERACTIVE as u64;
+pub const OPSLIMIT_INTERACTIVE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_INTERACTIVE as u32;
 
 /// argon2id pwhash moderate ops limit
-pub const OPSLIMIT_MODERATE: u64 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MODERATE as u64;
+pub const OPSLIMIT_MODERATE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MODERATE as u32;
 
 /// argon2id pwhash sensitive ops limit
-pub const OPSLIMIT_SENSITIVE: u64 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_SENSITIVE as u64;
+pub const OPSLIMIT_SENSITIVE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_SENSITIVE as u32;
 
 /// argon2id pwhash max ops limit
-pub const OPSLIMIT_MAX: u64 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u64;
+pub const OPSLIMIT_MAX: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u32;
 
 /// argon2id pwhash min mem limit
-pub const MEMLIMIT_MIN: usize =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as usize;
+pub const MEMLIMIT_MIN: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as u32;
 
 /// argon2id pwhash interactive mem limit
-pub const MEMLIMIT_INTERACTIVE: usize =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_INTERACTIVE as usize;
+pub const MEMLIMIT_INTERACTIVE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_INTERACTIVE as u32;
 
 /// argon2id pwhash moderate mem limit
-pub const MEMLIMIT_MODERATE: usize =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MODERATE as usize;
+pub const MEMLIMIT_MODERATE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MODERATE as u32;
 
 /// argon2id pwhash sensitive mem limit
-pub const MEMLIMIT_SENSITIVE: usize =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE as usize;
+pub const MEMLIMIT_SENSITIVE: u32 =
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE as u32;
 
 /// argon2id13 password hashing scheme
 pub async fn hash<H, P, S>(
     hash: H,
     passphrase: P,
     salt: S,
-    ops_limit: u64,
-    mem_limit: usize,
+    ops_limit: u32,
+    mem_limit: u32,
 ) -> SodokenResult<()>
 where
     H: Into<BufWrite> + 'static + Send,
@@ -71,16 +71,30 @@ where
     let passphrase = passphrase.into();
     let salt = salt.into();
     tokio_exec_blocking(move || {
-        let mut hash = hash.write_lock();
-        let passphrase = passphrase.read_lock();
-        let salt = salt.read_lock_sized();
+        // argon is designed to take a long time...
+        // we don't want to hold these locks open for a long time,
+        // so let's do some careful shuffling to only hold locks
+        // on local single buf instances.
+
+        let tmp_hash = BufWrite::new_mem_locked(hash.len())?;
+        let tmp_passphrase = BufWrite::deep_clone_mem_locked(passphrase)?;
+        let tmp_salt = BufWriteSized::deep_clone_no_lock(salt);
+
+        let mut tmp_hash_lock = tmp_hash.write_lock();
+        let tmp_passphrase_lock = tmp_passphrase.read_lock();
+        let tmp_salt_lock = tmp_salt.read_lock_sized();
+
         safe::sodium::crypto_pwhash_argon2id(
-            &mut hash,
-            &passphrase,
-            &salt,
+            &mut tmp_hash_lock,
+            &tmp_passphrase_lock,
+            &tmp_salt_lock,
             ops_limit,
             mem_limit,
-        )
+        )?;
+
+        hash.write_lock().copy_from_slice(&tmp_hash_lock);
+
+        Ok(())
     })
     .await
 }

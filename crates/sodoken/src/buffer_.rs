@@ -58,7 +58,7 @@ impl From<Arc<[u8]>> for BufRead {
 }
 
 impl BufRead {
-    /// Consruct a new BufRead that is NOT mem_locked.
+    /// Construct a new BufRead that is NOT mem_locked.
     pub fn new_no_lock(content: &[u8]) -> Self {
         content.to_vec().into()
     }
@@ -205,6 +205,28 @@ impl BufWrite {
         Ok(Self(Arc::new(BufWriteMemLocked::new(size)?)))
     }
 
+    /// Deep clone the data referred to by another buffer object,
+    /// into a new non-memory-locked BufWrite instance.
+    pub fn deep_clone_no_lock<O>(o: O) -> Self
+    where
+        O: Into<BufRead> + 'static + Send,
+    {
+        o.into().read_lock().to_vec().into()
+    }
+
+    /// Deep clone the data referred to by another buffer object,
+    /// into a new MEMORY LOCKED BufWrite instance.
+    pub fn deep_clone_mem_locked<O>(o: O) -> SodokenResult<Self>
+    where
+        O: Into<BufRead> + 'static + Send,
+    {
+        let o = o.into();
+        let len = o.len();
+        let out = Self::new_mem_locked(len)?;
+        out.write_lock().copy_from_slice(&*o.read_lock());
+        Ok(out)
+    }
+
     /// The length of this buffer.
     pub fn len(&self) -> usize {
         self.0.len()
@@ -266,6 +288,27 @@ impl<const N: usize> BufWriteSized<N> {
     /// locked memory is a finite resource.
     pub fn new_mem_locked() -> SodokenResult<Self> {
         Ok(Self(Arc::new(BufWriteMemLockedSized::new()?)))
+    }
+
+    /// Deep clone the data referred to by another buffer object,
+    /// into a new non-memory-locked BufWrite instance.
+    pub fn deep_clone_no_lock<O>(o: O) -> Self
+    where
+        O: Into<BufReadSized<N>> + 'static + Send,
+    {
+        (*o.into().read_lock_sized()).into()
+    }
+
+    /// Deep clone the data referred to by another buffer object,
+    /// into a new MEMORY LOCKED BufWrite instance.
+    pub fn deep_clone_mem_locked<O>(o: O) -> SodokenResult<Self>
+    where
+        O: Into<BufReadSized<N>> + 'static + Send,
+    {
+        let o = o.into();
+        let out = Self::new_mem_locked()?;
+        out.write_lock_sized().copy_from_slice(&*o.read_lock());
+        Ok(out)
     }
 
     /// The length of this buffer.
