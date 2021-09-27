@@ -153,36 +153,36 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_box() -> SodokenResult<()> {
         let nonce: BufReadSized<
-            { sealed_box::curve25519xchacha20poly1305::NONCEBYTES },
+            { crypto_box::curve25519xchacha20poly1305::NONCEBYTES },
         > = BufReadSized::new_no_lock(
-            [0; sealed_box::curve25519xchacha20poly1305::NONCEBYTES],
+            [0; crypto_box::curve25519xchacha20poly1305::NONCEBYTES],
         );
         let src_pub_: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let src_sec: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let dest_pub_: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let dest_sec: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let msg = BufRead::new_no_lock(b"test message");
 
-        sealed_box::curve25519xchacha20poly1305::keypair(
+        crypto_box::curve25519xchacha20poly1305::keypair(
             src_pub_.clone(),
             src_sec.clone(),
         )
         .await?;
-        sealed_box::curve25519xchacha20poly1305::keypair(
+        crypto_box::curve25519xchacha20poly1305::keypair(
             dest_pub_.clone(),
             dest_sec.clone(),
         )
         .await?;
 
-        let cipher = sealed_box::curve25519xchacha20poly1305::easy(
+        let cipher = crypto_box::curve25519xchacha20poly1305::easy(
             nonce.clone(),
             msg.clone(),
             dest_pub_.clone(),
@@ -192,12 +192,12 @@ mod tests {
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
         let msg_len =
-            sealed_box::curve25519xchacha20poly1305::open_easy_msg_len(
+            crypto_box::curve25519xchacha20poly1305::open_easy_msg_len(
                 cipher.read_lock().len(),
             );
         let msg2 = BufWrite::new_no_lock(msg_len);
 
-        sealed_box::curve25519xchacha20poly1305::open_easy(
+        crypto_box::curve25519xchacha20poly1305::open_easy(
             nonce.clone(),
             msg2.clone(),
             cipher.clone(),
@@ -214,48 +214,48 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_box_seed() -> SodokenResult<()> {
         let nonce: BufReadSized<
-            { sealed_box::curve25519xchacha20poly1305::NONCEBYTES },
+            { crypto_box::curve25519xchacha20poly1305::NONCEBYTES },
         > = BufReadSized::new_no_lock(
-            [0; sealed_box::curve25519xchacha20poly1305::NONCEBYTES],
+            [0; crypto_box::curve25519xchacha20poly1305::NONCEBYTES],
         );
         let src_seed: BufReadSized<
-            { sealed_box::curve25519xchacha20poly1305::SEEDBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SEEDBYTES },
         > = BufReadSized::new_no_lock(
-            [0xdb; sealed_box::curve25519xchacha20poly1305::SEEDBYTES],
+            [0xdb; crypto_box::curve25519xchacha20poly1305::SEEDBYTES],
         );
         let src_pub_: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let src_sec: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let dest_seed: BufReadSized<
-            { sealed_box::curve25519xchacha20poly1305::SEEDBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SEEDBYTES },
         > = BufReadSized::new_no_lock(
-            [0xbd; sealed_box::curve25519xchacha20poly1305::SEEDBYTES],
+            [0xbd; crypto_box::curve25519xchacha20poly1305::SEEDBYTES],
         );
         let dest_pub_: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::PUBLICKEYBYTES },
         > = BufWriteSized::new_no_lock();
         let dest_sec: BufWriteSized<
-            { sealed_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
+            { crypto_box::curve25519xchacha20poly1305::SECRETKEYBYTES },
         > = BufWriteSized::new_mem_locked().unwrap();
         let msg = BufRead::new_no_lock(b"test message");
 
-        sealed_box::curve25519xchacha20poly1305::seed_keypair(
+        crypto_box::curve25519xchacha20poly1305::seed_keypair(
             src_pub_.clone(),
             src_sec.clone(),
             src_seed.clone(),
         )
         .await?;
-        sealed_box::curve25519xchacha20poly1305::seed_keypair(
+        crypto_box::curve25519xchacha20poly1305::seed_keypair(
             dest_pub_.clone(),
             dest_sec.clone(),
             dest_seed.clone(),
         )
         .await?;
 
-        let cipher = sealed_box::curve25519xchacha20poly1305::easy(
+        let cipher = crypto_box::curve25519xchacha20poly1305::easy(
             nonce.clone(),
             msg.clone(),
             dest_pub_.clone(),
@@ -265,12 +265,12 @@ mod tests {
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
         let msg_len =
-            sealed_box::curve25519xchacha20poly1305::open_easy_msg_len(
+            crypto_box::curve25519xchacha20poly1305::open_easy_msg_len(
                 cipher.read_lock().len(),
             );
         let msg2 = BufWrite::new_no_lock(msg_len);
 
-        sealed_box::curve25519xchacha20poly1305::open_easy(
+        crypto_box::curve25519xchacha20poly1305::open_easy(
             nonce.clone(),
             msg2.clone(),
             cipher.clone(),

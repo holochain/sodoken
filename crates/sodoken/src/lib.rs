@@ -16,11 +16,11 @@ pub(crate) mod safe;
 mod buffer_;
 pub use buffer_::*;
 
+pub mod crypto_box;
 pub mod hash;
 pub mod kdf;
 pub mod kx;
 pub mod random;
-pub mod sealed_box;
 pub mod secretstream;
 pub mod sign;
 
