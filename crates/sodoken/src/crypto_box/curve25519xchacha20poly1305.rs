@@ -25,6 +25,10 @@ pub const MACBYTES: usize =
 pub const NONCEBYTES: usize =
     libsodium_sys::crypto_box_curve25519xchacha20poly1305_NONCEBYTES as usize;
 
+/// sealed box extra bytes
+pub const SEALBYTES: usize =
+    libsodium_sys::crypto_box_curve25519xchacha20poly1305_SEALBYTES as usize;
+
 /// create a box curve25519xchacha20poly1305 keypair from a private seed
 pub async fn seed_keypair<P, S, Seed>(
     pub_key: P,
@@ -146,9 +150,94 @@ where
     .await
 }
 
+/// seal (encrypt) a message with an ephemeral key that can't even be decrypted
+/// by this sender.
+pub async fn seal<C, M, P>(
+    cipher: C,
+    message: M,
+    dest_pub_key: P,
+) -> SodokenResult<()>
+where
+    C: Into<BufWrite> + 'static + Send,
+    M: Into<BufRead> + 'static + Send,
+    P: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+{
+    let cipher = cipher.into();
+    let message = message.into();
+    let dest_pub_key = dest_pub_key.into();
+    tokio_exec_blocking(move || {
+        let mut cipher = cipher.write_lock();
+        let message = message.read_lock();
+        let dest_pub_key = dest_pub_key.read_lock_sized();
+        safe::sodium::crypto_box_curve25519xchacha20poly1305_seal(
+            &mut cipher,
+            &message,
+            &dest_pub_key,
+        )
+    })
+    .await
+}
+
+/// open (decrypt) a sealed message.
+pub async fn seal_open<M, C, P, S>(
+    message: M,
+    cipher: C,
+    pub_key: P,
+    sec_key: S,
+) -> SodokenResult<()>
+where
+    M: Into<BufWrite> + 'static + Send,
+    C: Into<BufRead> + 'static + Send,
+    P: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
+{
+    let message = message.into();
+    let cipher = cipher.into();
+    let pub_key = pub_key.into();
+    let sec_key = sec_key.into();
+    tokio_exec_blocking(move || {
+        let mut message = message.write_lock();
+        let cipher = cipher.read_lock();
+        let pub_key = pub_key.read_lock_sized();
+        let sec_key = sec_key.read_lock_sized();
+        safe::sodium::crypto_box_curve25519xchacha20poly1305_seal_open(
+            &mut message,
+            &cipher,
+            &pub_key,
+            &sec_key,
+        )
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_seal() -> SodokenResult<()> {
+        use crypto_box::curve25519xchacha20poly1305::*;
+
+        let dest_pub: BufWriteSized<{ PUBLICKEYBYTES }> =
+            BufWriteSized::new_no_lock();
+        let dest_sec: BufWriteSized<{ SECRETKEYBYTES }> =
+            BufWriteSized::new_mem_locked().unwrap();
+
+        keypair(dest_pub.clone(), dest_sec.clone()).await?;
+
+        let message = BufRead::from(&b"hello"[..]);
+        let cipher = BufWrite::new_no_lock(message.len() + SEALBYTES);
+
+        seal(cipher.clone(), message, dest_pub.clone()).await?;
+
+        let output = BufWrite::new_no_lock(cipher.len() - SEALBYTES);
+
+        seal_open(output.clone(), cipher, dest_pub, dest_sec).await?;
+
+        assert_eq!(b"hello", &*output.read_lock());
+
+        Ok(())
+    }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_box() -> SodokenResult<()> {
