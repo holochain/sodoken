@@ -361,17 +361,12 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_open_easy(
     }
 }
 
-#[allow(dead_code)]
 pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seal(
     cipher: &mut [u8],
     message: &[u8],
-    dest_pub_key: &[u8;
-         libsodium_sys::crypto_box_PUBLICKEYBYTES
-             as usize],
+    dest_pub_key: &[u8; libsodium_sys::crypto_box_PUBLICKEYBYTES as usize],
 ) -> SodokenResult<()> {
-    let c_len = message.len()
-        + libsodium_sys::crypto_box_SEALBYTES
-            as usize;
+    let c_len = message.len() + libsodium_sys::crypto_box_SEALBYTES as usize;
 
     if cipher.len() != c_len {
         return Err(SodokenErrKind::BadCipherSize.into());
@@ -397,20 +392,13 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seal(
     }
 }
 
-#[allow(dead_code)]
 pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seal_open(
     message: &mut [u8],
     cipher: &[u8],
-    pub_key: &[u8;
-         libsodium_sys::crypto_box_PUBLICKEYBYTES
-             as usize],
-    sec_key: &[u8;
-         libsodium_sys::crypto_box_SECRETKEYBYTES
-             as usize],
+    pub_key: &[u8; libsodium_sys::crypto_box_PUBLICKEYBYTES as usize],
+    sec_key: &[u8; libsodium_sys::crypto_box_SECRETKEYBYTES as usize],
 ) -> SodokenResult<()> {
-    let m_len = cipher.len()
-        - libsodium_sys::crypto_box_SEALBYTES
-            as usize;
+    let m_len = cipher.len() - libsodium_sys::crypto_box_SEALBYTES as usize;
 
     if message.len() != m_len {
         return Err(SodokenErrKind::BadMessageSize.into());
