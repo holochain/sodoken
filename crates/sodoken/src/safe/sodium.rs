@@ -109,6 +109,89 @@ pub(crate) fn crypto_generichash(
     }
 }
 
+pub(crate) fn crypto_generichash_init(
+    key: Option<&[u8]>,
+    outlen: usize,
+) -> SodokenResult<libsodium_sys::crypto_generichash_state>
+where
+{
+    let (key_len, key) = match key {
+        Some(key) => {
+            if key.len()
+                < libsodium_sys::crypto_generichash_KEYBYTES_MIN as usize
+                || key.len()
+                    > libsodium_sys::crypto_generichash_KEYBYTES_MAX as usize
+            {
+                return Err(SodokenErrKind::BadKeySize.into());
+            }
+            (key.len(), raw_ptr_char_immut!(key))
+        }
+        None => (0, std::ptr::null()),
+    };
+
+    let mut state =
+        libsodium_sys::crypto_generichash_state { opaque: [0; 384] };
+
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_generichash_init(
+            &mut state, key, key_len, outlen,
+        ) == 0_i32
+        {
+            return Ok(state);
+        }
+        Err(SodokenErrKind::InternalSodium.into())
+    }
+}
+
+pub(crate) fn crypto_generichash_update(
+    state: &mut libsodium_sys::crypto_generichash_state,
+    message: &[u8],
+) -> SodokenResult<()> {
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_generichash_update(
+            state,
+            raw_ptr_char_immut!(message),
+            message.len() as libc::c_ulonglong,
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenErrKind::InternalSodium.into())
+    }
+}
+
+pub(crate) fn crypto_generichash_final(
+    mut state: libsodium_sys::crypto_generichash_state,
+    hash: &mut [u8],
+) -> SodokenResult<()> {
+    if hash.len() < libsodium_sys::crypto_generichash_BYTES_MIN as usize
+        || hash.len() > libsodium_sys::crypto_generichash_BYTES_MAX as usize
+    {
+        return Err(SodokenErrKind::BadHashSize.into());
+    }
+
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_generichash_final(
+            &mut state,
+            raw_ptr_char!(hash),
+            hash.len(),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenErrKind::InternalSodium.into())
+    }
+}
+
 pub(crate) fn crypto_pwhash_argon2id(
     hash: &mut [u8],
     passphrase: &[u8],

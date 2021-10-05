@@ -99,6 +99,86 @@ where
     hash_inner::<H, M, BufRead>(hash, message, None).await
 }
 
+/// A streaming hash instance.
+pub struct Blake2bHash<const N: usize>(
+    Option<libsodium_sys::crypto_generichash_state>,
+);
+
+impl<const N: usize> Blake2bHash<N> {
+    /// Construct a new blake2b streaming hash instance
+    pub fn new() -> SodokenResult<Self> {
+        if N < libsodium_sys::crypto_generichash_BYTES_MIN as usize
+            || N > libsodium_sys::crypto_generichash_BYTES_MAX as usize
+        {
+            return Err(SodokenErrKind::BadHashSize.into());
+        }
+
+        Ok(Self(Some(safe::sodium::crypto_generichash_init(None, N)?)))
+    }
+
+    /// Construct a new blake2b streaming hash instance with key
+    pub fn with_key<K>(key: K) -> SodokenResult<Self>
+    where
+        K: Into<BufRead> + 'static + Send,
+    {
+        let key = key.into();
+        let key = key.read_lock();
+        Ok(Self(Some(safe::sodium::crypto_generichash_init(
+            Some(&key),
+            N,
+        )?)))
+    }
+
+    /// Update with additional data
+    pub async fn update<D>(&mut self, data: D) -> SodokenResult<()>
+    where
+        D: Into<BufRead> + 'static + Send,
+    {
+        let data = data.into();
+
+        // extract our state, so we can invoke a static blocking task
+        // we always put it back, so it's safe to unwrap().
+        let mut state = self.0.take().unwrap();
+
+        // copied from above, do we need to test this specifically?
+        const BLOCKING_THRESHOLD: usize = 1024 * 50;
+
+        let len = data.len();
+        let mut exec = move || {
+            let data = data.read_lock();
+            let res =
+                safe::sodium::crypto_generichash_update(&mut state, &data);
+            (state, res)
+        };
+
+        if len <= BLOCKING_THRESHOLD {
+            let (state, res) = exec();
+            self.0 = Some(state);
+            return res;
+        }
+        let (state, res) = tokio_exec_blocking(exec).await;
+        self.0 = Some(state);
+        res
+    }
+
+    /// Finalize the hashing, filling in the results
+    pub fn finish<R>(mut self, result: R) -> SodokenResult<()>
+    where
+        R: Into<BufWriteSized<N>> + Send,
+    {
+        // extract our state, so we can invoke a static blocking task
+        // we always put it back, so it's safe to unwrap().
+        let state = self.0.take().unwrap();
+
+        let result = result.into();
+        let mut result = result.write_lock();
+
+        safe::sodium::crypto_generichash_final(state, &mut result)?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -109,6 +189,27 @@ mod tests {
         let msg = BufRead::new_no_lock(b"test message");
         let hash = BufWrite::new_no_lock(hash::blake2b::BYTES_MIN);
         hash::blake2b::hash(hash.clone(), msg.clone()).await?;
+        assert_eq!(
+            "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
+            format!("{:?}", &*hash.read_lock()),
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn blake2b_stream() -> SodokenResult<()> {
+        let msg = BufRead::new_no_lock(b"test ");
+        let msg2 = BufRead::new_no_lock(b"message");
+        let hash = BufWriteSized::new_no_lock();
+
+        let mut hasher =
+            <hash::blake2b::Blake2bHash<{ hash::blake2b::BYTES_MIN }>>::new()?;
+        hasher.update(msg).await?;
+        hasher.update(msg2).await?;
+
+        hasher.finish(hash.clone())?;
+
         assert_eq!(
             "[153, 12, 203, 148, 189, 196, 68, 143, 36, 38, 97, 11, 155, 176, 16, 230]",
             format!("{:?}", &*hash.read_lock()),
