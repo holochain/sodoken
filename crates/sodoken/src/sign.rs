@@ -1,4 +1,37 @@
 //! Api functions related to cryptographic signatures and verification.
+//!
+//! #### Example
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! // we have a keypair
+//! let pk: sodoken::BufWriteSized<{ sodoken::sign::PUBLICKEYBYTES }> =
+//!     sodoken::BufWriteSized::new_no_lock();
+//! let sk: sodoken::BufWriteSized<{ sodoken::sign::SECRETKEYBYTES }> =
+//!     sodoken::BufWriteSized::new_mem_locked().unwrap();
+//! sodoken::sign::keypair(pk.clone(), sk.clone()).await.unwrap();
+//! let pk = pk.to_read_sized();
+//! let sk = sk.to_read_sized();
+//!
+//! // we can generate a signature
+//! let sig: sodoken::BufWriteSized<{ sodoken::sign::BYTES }> =
+//!     sodoken::BufWriteSized::new_no_lock();
+//! sodoken::sign::detached(
+//!     sig.clone(),
+//!     b"test message".to_vec(),
+//!     sk,
+//! ).await.unwrap();
+//! let sig = sig.to_read_sized();
+//!
+//! // we can validate the signature
+//! assert!(sodoken::sign::verify_detached(
+//!     sig,
+//!     b"test message".to_vec(),
+//!     pk,
+//! ).await.unwrap());
+//! # }
+//! ```
 
 use crate::*;
 

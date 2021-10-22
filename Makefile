@@ -21,6 +21,7 @@ publish: tools
 test: tools
 	$(ENV) cargo fmt -- --check
 	$(ENV) cargo clippy
+	$(ENV) RUST_BACKTRACE=1 cargo test --all-targets --no-run
 	$(ENV) RUST_BACKTRACE=1 cargo test
 	$(ENV) cargo readme -r crates/sodoken -o README.md
 	$(ENV) cargo readme -r crates/sodoken -o ../../README.md

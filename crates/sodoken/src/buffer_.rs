@@ -459,6 +459,10 @@ impl BufExtend {
 }
 
 /// Additional types related to working with buffers.
+///
+/// The main sodoken buffer documentation is at the crate-level. You probably
+/// don't need to reference the types here unless you are implementing a custom
+/// sodoken buffer type.
 pub mod buffer {
     use super::*;
 

@@ -1,5 +1,7 @@
 //! Api functions related to cryptographic box encryption / decryption using
 //! the curve25519xsalsa20poly1305 algorithm.
+//!
+//! See crypto_box module-level documentation for usage examples.
 
 use crate::*;
 

@@ -13,7 +13,7 @@ static TOKIO: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 
 fn blake2b(hash: sodoken::BufWrite, data: sodoken::BufWrite) {
     TOKIO.block_on(async move {
-        sodoken::blake2b::hash(hash, data).await.unwrap();
+        sodoken::hash::blake2b::hash(hash, data).await.unwrap();
     });
 }
 
@@ -28,8 +28,9 @@ fn bench(c: &mut Criterion) {
             BenchmarkId::from_parameter(size),
             size,
             move |b, &size| {
-                let hash =
-                    sodoken::BufWrite::new_no_lock(sodoken::blake2b::BYTES_MIN);
+                let hash = sodoken::BufWrite::new_no_lock(
+                    sodoken::hash::blake2b::BYTES_MIN,
+                );
                 let data = sodoken::BufWrite::new_no_lock(size);
                 b.iter(move || {
                     blake2b(black_box(hash.clone()), black_box(data.clone()));
