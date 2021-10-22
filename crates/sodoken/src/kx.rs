@@ -1,4 +1,49 @@
 //! Api functions related to cryptographically secure key exchange.
+//!
+//! #### Example Key Derivation
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! // server has a key pair
+//! let pk_srv = sodoken::BufWriteSized::new_no_lock();
+//! let sk_srv = sodoken::BufWriteSized::new_no_lock();
+//! sodoken::kx::keypair(pk_srv.clone(), sk_srv.clone()).unwrap();
+//!
+//! // client has a keypair
+//! let pk_cli = sodoken::BufWriteSized::new_no_lock();
+//! let sk_cli = sodoken::BufWriteSized::new_no_lock();
+//! sodoken::kx::keypair(pk_cli.clone(), sk_cli.clone()).unwrap();
+//!
+//! // client can perform a key exchange with just the server pk
+//! let cli_rx = sodoken::BufWriteSized::new_no_lock();
+//! let cli_tx = sodoken::BufWriteSized::new_no_lock();
+//! sodoken::kx::client_session_keys(
+//!     cli_rx.clone(),
+//!     cli_tx.clone(),
+//!     pk_cli.clone(),
+//!     sk_cli.clone(),
+//!     pk_srv.clone(),
+//! )
+//! .unwrap();
+//!
+//! // server can perform a key exchange with just the client pk
+//! let srv_rx = sodoken::BufWriteSized::new_no_lock();
+//! let srv_tx = sodoken::BufWriteSized::new_no_lock();
+//! sodoken::kx::server_session_keys(
+//!     srv_rx.clone(),
+//!     srv_tx.clone(),
+//!     pk_srv.clone(),
+//!     sk_srv.clone(),
+//!     pk_cli.clone(),
+//! )
+//! .unwrap();
+//!
+//! // both sides have the same keys
+//! assert_eq!(&*cli_rx.read_lock(), &*srv_tx.read_lock());
+//! assert_eq!(&*cli_tx.read_lock(), &*srv_rx.read_lock());
+//! # }
+//! ```
 
 use crate::*;
 

@@ -1,4 +1,16 @@
 //! Api functions related to cryptographically secure randomness / entropy.
+//!
+//! #### Example
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! let salt: sodoken::BufWriteSized<{ sodoken::hash::argon2id::SALTBYTES }> =
+//!     sodoken::BufWriteSized::new_no_lock();
+//! sodoken::random::bytes_buf(salt.clone()).await.unwrap();
+//! let salt = salt.to_read_sized();
+//! # }
+//! ```
 
 use crate::*;
 

@@ -1,4 +1,37 @@
 //! Api functions related to the blake2b generichash algorithm.
+//!
+//! Blake2b is a fast generic hashing algorithm.
+//!
+//! #### Example if you have all the data ahead of time:
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! let hash = <sodoken::BufWriteSized<32>>::new_no_lock();
+//! sodoken::hash::blake2b::hash(
+//!     hash.clone(),
+//!     b"test-data".to_vec(),
+//! ).await.unwrap();
+//! let hash = hash.to_read_sized();
+//! assert_eq!(&[168, 70, 104, 97], &hash.read_lock()[..4]);
+//! # }
+//! ```
+//!
+//! #### Stream hashing example:
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! let mut hasher = <sodoken::hash::blake2b::Blake2bHash<32>>::new().unwrap();
+//! hasher.update(b"test".to_vec()).await.unwrap();
+//! hasher.update(b"-".to_vec()).await.unwrap();
+//! hasher.update(b"data".to_vec()).await.unwrap();
+//! let hash = sodoken::BufWriteSized::new_no_lock();
+//! hasher.finish(hash.clone()).unwrap();
+//! let hash = hash.to_read_sized();
+//! assert_eq!(&[168, 70, 104, 97], &hash.read_lock()[..4]);
+//! # }
+//! ```
 
 use crate::*;
 

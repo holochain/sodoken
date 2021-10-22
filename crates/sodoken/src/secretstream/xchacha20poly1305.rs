@@ -1,5 +1,7 @@
 //! Api functions related to secret stream encryption / decryption using
 //! the xchacha20poly1305 algorithm.
+//!
+//! See the secretstream module-level documentation for usage examples.
 
 use crate::*;
 

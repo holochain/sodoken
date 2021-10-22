@@ -1,4 +1,33 @@
 //! Api functions related to the argon2id password hashing algorithm.
+//!
+//! Argon2 is a password hashing scheme designed to be both cpu and
+//! memory hard. You can configure this hardness with the `ops_limit`
+//! for how difficult it is cpu-wise, and `mem_limit` for how much
+//! memory it will use during the operation. For tests, please use
+//! `MIN`, otherwise your tests will take a long time.
+//!
+//! #### Example
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! // generate salt
+//! let salt = sodoken::BufWriteSized::new_no_lock();
+//! sodoken::random::bytes_buf(salt.clone()).await.unwrap();
+//! let salt = salt.to_read_sized();
+//!
+//! // generate the pw hash
+//! let hash = <sodoken::BufWriteSized<32>>::new_no_lock();
+//! sodoken::hash::argon2id::hash(
+//!     hash.clone(),
+//!     b"my-passphrase".to_vec(),
+//!     salt.clone(),
+//!     sodoken::hash::argon2id::OPSLIMIT_MIN,
+//!     sodoken::hash::argon2id::MEMLIMIT_MIN,
+//! ).await.unwrap();
+//! let hash = hash.to_read_sized();
+//! # }
+//! ```
 
 use crate::*;
 

@@ -13,7 +13,7 @@ static TOKIO: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 
 fn random(buf: sodoken::BufWrite) {
     TOKIO.block_on(async move {
-        sodoken::random::randombytes_buf(buf).await.unwrap();
+        sodoken::random::bytes_buf(buf).await.unwrap();
     });
 }
 

@@ -1,4 +1,21 @@
 //! Api functions related to cryptographically secure key derivation.
+//!
+//! #### Example Key Derivation
+//!
+//! ```
+//! # #[tokio::main]
+//! # async fn main() {
+//! let parent_key = [0; 32];
+//! let sub_key = sodoken::BufWrite::new_no_lock(32);
+//! sodoken::kdf::derive_from_key(
+//!     sub_key.clone(),
+//!     42,           // index
+//!     *b"CtxBytes", // context
+//!     parent_key,
+//! ).unwrap();
+//! assert_eq!(&[236, 60, 149, 214], &sub_key.read_lock()[..4]);
+//! # }
+//! ```
 
 use crate::*;
 
