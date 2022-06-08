@@ -169,10 +169,8 @@ impl S3Buf {
 impl std::fmt::Debug for S3Buf {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self.p.borrow() {
-            ProtectState::NoAccess => {
-                write!(f, "Buffer {{ {:?} }}", "<NO_ACCESS>")
-            }
-            _ => write!(f, "Buffer {{ {:?} }}", *self),
+            ProtectState::NoAccess => f.write_str("Buffer { <NO_ACCESS> }"),
+            _ => write!(f, "Buffer {{ {:?} }}", self.as_slice()),
         }
     }
 }

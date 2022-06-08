@@ -458,6 +458,9 @@ pub(crate) fn crypto_sign_verify_detached(
 mod crypto_box;
 pub(crate) use crypto_box::*;
 
+mod secretbox;
+pub(crate) use secretbox::*;
+
 use crate::secretstream::xchacha20poly1305::SecretStreamTag;
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
