@@ -1,6 +1,6 @@
 [package]
 name = "sodoken"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Holochain Core Dev Team <devcore@holochain.org>"]
 edition = "2018"
 description = "libsodium wrapper providing tokio safe memory secure api access."

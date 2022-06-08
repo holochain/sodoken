@@ -1,3 +1,6 @@
+// if the api fails, we don't return the uninitialized bytes
+#![allow(clippy::uninit_vec)]
+
 use super::*;
 
 // -- xchacha20poly1305 -- //

@@ -7,6 +7,12 @@ lib SOdium + haDOKEN = SODOKEN!
 
 libsodium wrapper providing tokio safe memory secure api access.
 
+[![Project](https://img.shields.io/badge/project-holochain-blue.svg?style=flat-square)](http://holochain.org/)
+[![Forum](https://img.shields.io/badge/chat-forum%2eholochain%2enet-blue.svg?style=flat-square)](https://forum.holochain.org)
+[![Chat](https://img.shields.io/badge/chat-chat%2eholochain%2enet-blue.svg?style=flat-square)](https://chat.holochain.org)
+
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 This crate-level documentation mainly describes how to work with the
 sodoken buffer types. Please see the individual module-level documentation
 for usage examples and descriptions of individual crypto functions.
