@@ -1,6 +1,3 @@
-<a href="https://github.com/holochain/sodoken/blob/master/LICENSE-APACHE">![Crates.io](https://img.shields.io/crates/l/sodoken)</a>
-<a href="https://crates.io/crates/sodoken">![Crates.io](https://img.shields.io/crates/v/sodoken)</a>
-
 # sodoken
 
 lib SOdium + haDOKEN = SODOKEN!
@@ -11,6 +8,7 @@ libsodium wrapper providing tokio safe memory secure api access.
 [![Forum](https://img.shields.io/badge/chat-forum%2eholochain%2enet-blue.svg?style=flat-square)](https://forum.holochain.org)
 [![Chat](https://img.shields.io/badge/chat-chat%2eholochain%2enet-blue.svg?style=flat-square)](https://chat.holochain.org)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 This crate-level documentation mainly describes how to work with the
@@ -50,3 +48,5 @@ sodoken::random::bytes_buf(salt.clone()).await.unwrap();
 // translate that buffer into a read-only version for future use
 let salt = salt.to_read_sized();
 ```
+
+License: MIT OR Apache-2.0
