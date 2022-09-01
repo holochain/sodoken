@@ -110,11 +110,6 @@ where
     .await
 }
 
-/// calculate the message len for an easy cipher len
-pub fn open_easy_msg_len(cipher_len: usize) -> usize {
-    cipher_len - MACBYTES
-}
-
 /// decrypt data with box_curve25519xchacha20poly1305_open_easy
 pub async fn open_easy<N, M, C, P, S>(
     nonce: N,
@@ -282,10 +277,8 @@ mod tests {
         .await?;
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        let msg_len =
-            crypto_box::curve25519xchacha20poly1305::open_easy_msg_len(
-                cipher.read_lock().len(),
-            );
+        let msg_len = cipher.read_lock().len()
+            - crypto_box::curve25519xchacha20poly1305::MACBYTES;
         let msg2 = BufWrite::new_no_lock(msg_len);
 
         crypto_box::curve25519xchacha20poly1305::open_easy(
@@ -355,10 +348,8 @@ mod tests {
         .await?;
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        let msg_len =
-            crypto_box::curve25519xchacha20poly1305::open_easy_msg_len(
-                cipher.read_lock().len(),
-            );
+        let msg_len = cipher.read_lock().len()
+            - crypto_box::curve25519xchacha20poly1305::MACBYTES;
         let msg2 = BufWrite::new_no_lock(msg_len);
 
         crypto_box::curve25519xchacha20poly1305::open_easy(
