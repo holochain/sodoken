@@ -45,11 +45,6 @@ where
     .await
 }
 
-/// calculate the message len for an easy cipher len
-pub fn open_easy_msg_len(cipher_len: usize) -> usize {
-    cipher_len - MACBYTES
-}
-
 /// decrypt data with crypto_secretbox_xsalsa20poly1305_open_easy
 pub async fn open_easy<N, M, C, K>(
     nonce: N,
@@ -107,9 +102,8 @@ mod tests {
         .await?;
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
-        let msg_len = secretbox::xsalsa20poly1305::open_easy_msg_len(
-            cipher.read_lock().len(),
-        );
+        let msg_len =
+            cipher.read_lock().len() - secretbox::xsalsa20poly1305::MACBYTES;
         let msg2 = BufWrite::new_no_lock(msg_len);
 
         secretbox::xsalsa20poly1305::open_easy(

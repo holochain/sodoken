@@ -65,7 +65,7 @@
 //! ).await.unwrap();
 //!
 //! // receiver decrypts the message
-//! let msg_len = open_easy_msg_len(cipher.len());
+//! let msg_len = cipher.len() - MACBYTES;
 //! let msg = sodoken::BufWrite::new_no_lock(msg_len);
 //! open_easy(
 //!     nonce,
