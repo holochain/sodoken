@@ -223,7 +223,7 @@ impl BufWrite {
         let o = o.into();
         let len = o.len();
         let out = Self::new_mem_locked(len)?;
-        out.write_lock().copy_from_slice(&*o.read_lock());
+        out.write_lock().copy_from_slice(&o.read_lock());
         Ok(out)
     }
 
@@ -307,7 +307,7 @@ impl<const N: usize> BufWriteSized<N> {
     {
         let o = o.into();
         let out = Self::new_mem_locked()?;
-        out.write_lock_sized().copy_from_slice(&*o.read_lock());
+        out.write_lock_sized().copy_from_slice(&o.read_lock());
         Ok(out)
     }
 
@@ -1255,32 +1255,32 @@ pub mod buffer {
                 type Target = [u8; N];
 
                 fn deref(&self) -> &Self::Target {
-                    &*self.0
+                    &self.0
                 }
             }
             impl<'a, const N: usize> std::ops::DerefMut for X<'a, N> {
                 fn deref_mut(&mut self) -> &mut Self::Target {
-                    &mut *self.0
+                    &mut self.0
                 }
             }
             impl<'a, const N: usize> AsRef<[u8; N]> for X<'a, N> {
                 fn as_ref(&self) -> &[u8; N] {
-                    &*self.0
+                    &self.0
                 }
             }
             impl<'a, const N: usize> AsMut<[u8; N]> for X<'a, N> {
                 fn as_mut(&mut self) -> &mut [u8; N] {
-                    &mut *self.0
+                    &mut self.0
                 }
             }
             impl<'a, const N: usize> Borrow<[u8; N]> for X<'a, N> {
                 fn borrow(&self) -> &[u8; N] {
-                    &*self.0
+                    &self.0
                 }
             }
             impl<'a, const N: usize> BorrowMut<[u8; N]> for X<'a, N> {
                 fn borrow_mut(&mut self) -> &mut [u8; N] {
-                    &mut *self.0
+                    &mut self.0
                 }
             }
             impl<'a, const N: usize> AsReadSized<'a, N> for X<'a, N> {}
