@@ -1,5 +1,6 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![allow(clippy::unnecessary_cast)]
 //! lib SOdium + haDOKEN = SODOKEN!
 //!
 //! libsodium wrapper providing tokio safe memory secure api access.
