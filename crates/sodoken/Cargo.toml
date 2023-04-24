@@ -1,6 +1,6 @@
 [package]
 name = "sodoken"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Holochain Core Dev Team <devcore@holochain.org>"]
 edition = "2021"
 description = "libsodium wrapper providing tokio safe memory secure api access."
@@ -12,17 +12,17 @@ documentation = "https://docs.rs/sodoken"
 repository = "https://github.com/holochain/sodoken"
 
 [dependencies]
-libc = "0.2.138"
+libc = "0.2.142"
 libsodium-sys = { version = "1.19.27", package = "libsodium-sys-stable" }
-num_cpus = "1.14.0"
-once_cell = "1.16.0"
+num_cpus = "1.15.0"
+once_cell = "1.17.1"
 one_err = "0.0.8"
 parking_lot = "0.12.1"
-tokio = { version = "1.23.0", features = ["sync", "rt"] }
+tokio = { version = "1.27.0", features = ["sync", "rt"] }
 
 [dev-dependencies]
 criterion = "0.4.0"
-tokio = { version = "1.23.0", features = ["full"] }
+tokio = { version = "1.27.0", features = ["full"] }
 
 [[bench]]
 name = "blake2b"
