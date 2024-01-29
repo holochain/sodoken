@@ -50,6 +50,9 @@ pub enum SodokenErrKind {
     /// Internal libsodium error
     InternalSodium,
 
+    /// Spawn blocking failed, likely due to shutdown
+    SpawnBlocking,
+
     /// OtherErrorType
     Other,
 }
@@ -74,6 +77,7 @@ impl From<SodokenErrKind> for &'static str {
             BadMemLimit => "BadMemLimit",
             WriteOverflow => "WriteOverflow",
             InternalSodium => "InternalSodium",
+            SpawnBlocking => "SpawnBlocking",
             _ => "Other",
         }
     }
@@ -99,6 +103,7 @@ impl From<&str> for SodokenErrKind {
             "BadMemLimit" => BadMemLimit,
             "WriteOverflow" => WriteOverflow,
             "InternalSodium" => InternalSodium,
+            "SpawnBlocking" => SpawnBlocking,
             _ => Other,
         }
     }

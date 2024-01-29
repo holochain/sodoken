@@ -109,7 +109,7 @@ impl SecretStreamEncrypt {
             self.0 = Some(state);
             return res;
         }
-        let (state, res) = tokio_exec_blocking(exec_push).await;
+        let (state, res) = tokio_exec_blocking(exec_push).await?;
         self.0 = Some(state);
         res
     }
@@ -277,7 +277,7 @@ impl SecretStreamDecrypt {
             self.0 = Some(state);
             return res;
         }
-        let (state, res) = tokio_exec_blocking(exec_pull).await;
+        let (state, res) = tokio_exec_blocking(exec_pull).await?;
         self.0 = Some(state);
         res
     }

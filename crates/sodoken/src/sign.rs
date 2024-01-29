@@ -130,7 +130,7 @@ where
     if len <= BLOCKING_THRESHOLD {
         return exec_sign();
     }
-    tokio_exec_blocking(exec_sign).await
+    tokio_exec_blocking(exec_sign).await?
 }
 
 /// create a signature from a signature private key
@@ -183,7 +183,7 @@ where
     if len <= BLOCKING_THRESHOLD {
         return exec_verify();
     }
-    tokio_exec_blocking(exec_verify).await
+    tokio_exec_blocking(exec_verify).await?
 }
 
 #[cfg(test)]

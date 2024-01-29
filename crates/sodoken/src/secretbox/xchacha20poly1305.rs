@@ -42,7 +42,7 @@ where
         )?;
         Ok(cipher.into())
     })
-    .await
+    .await?
 }
 
 /// decrypt data with crypto_secretbox_xchacha20poly1305_open_easy
@@ -74,7 +74,7 @@ where
             &shared_key,
         )
     })
-    .await
+    .await?
 }
 
 #[cfg(test)]
