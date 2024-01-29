@@ -31,7 +31,7 @@ pub(crate) static THREAD_LIMIT: Lazy<Arc<Semaphore>> = Lazy::new(|| {
 });
 
 /// Executes `f` on the tokio blocking thread pool and awaits the result.
-pub(crate) async fn tokio_exec_blocking<T, F>(f: F) -> T
+pub(crate) async fn tokio_exec_blocking<T, F>(f: F) -> crate::SodokenResult<T>
 where
     T: 'static + Send,
     F: 'static + Send + FnOnce() -> T,
@@ -39,5 +39,5 @@ where
     let _permit = THREAD_LIMIT.acquire().await.expect("semaphore cancelled");
     tokio::task::spawn_blocking(f)
         .await
-        .expect("blocking task shutdown prematurely")
+        .map_err(|_| crate::SodokenErrKind::SpawnBlocking.into())
 }

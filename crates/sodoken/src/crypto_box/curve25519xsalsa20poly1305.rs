@@ -49,7 +49,7 @@ where
             &seed,
         )
     })
-    .await
+    .await?
 }
 
 /// create a box curve25519xsalsa20poly1305 keypair from entropy
@@ -68,7 +68,7 @@ where
             &mut sec_key,
         )
     })
-    .await
+    .await?
 }
 
 /// encrypt data with box_curve25519xsalsa20poly1305_easy
@@ -101,7 +101,7 @@ where
         )?;
         Ok(cipher.into())
     })
-    .await
+    .await?
 }
 
 /// decrypt data with box_curve25519xsalsa20poly1305_open_easy
@@ -138,7 +138,7 @@ where
             &dest_sec_key,
         )
     })
-    .await
+    .await?
 }
 
 /// seal (encrypt) a message with an ephemeral key that can't even be decrypted
@@ -166,7 +166,7 @@ where
             &dest_pub_key,
         )
     })
-    .await
+    .await?
 }
 
 /// open (decrypt) a sealed message.
@@ -198,7 +198,7 @@ where
             &sec_key,
         )
     })
-    .await
+    .await?
 }
 
 #[cfg(test)]

@@ -3,5 +3,7 @@ members = [
   "crates/sodoken",
 ]
 
+resolver = "2"
+
 [patch.crates-io]
 #one_err = { path = "../one_err" }

@@ -50,7 +50,7 @@ where
     if len <= BLOCKING_THRESHOLD {
         return exec_random();
     }
-    tokio_exec_blocking(exec_random).await
+    tokio_exec_blocking(exec_random).await?
 }
 
 #[cfg(test)]

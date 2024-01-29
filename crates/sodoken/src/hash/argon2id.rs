@@ -125,7 +125,7 @@ where
 
         Ok(())
     })
-    .await
+    .await?
 }
 
 #[cfg(test)]

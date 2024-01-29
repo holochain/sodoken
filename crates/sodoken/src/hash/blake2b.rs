@@ -106,7 +106,7 @@ where
     if len <= BLOCKING_THRESHOLD {
         return exec_hash();
     }
-    tokio_exec_blocking(exec_hash).await
+    tokio_exec_blocking(exec_hash).await?
 }
 
 /// blake2b hashing scheme
@@ -189,7 +189,7 @@ impl<const N: usize> Blake2bHash<N> {
             self.0 = Some(state);
             return res;
         }
-        let (state, res) = tokio_exec_blocking(exec).await;
+        let (state, res) = tokio_exec_blocking(exec).await?;
         self.0 = Some(state);
         res
     }
