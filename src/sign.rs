@@ -42,6 +42,14 @@ pub const SEEDBYTES: usize = libsodium_sys::crypto_sign_SEEDBYTES as usize;
 pub const PUBLICKEYBYTES: usize =
     libsodium_sys::crypto_sign_PUBLICKEYBYTES as usize;
 
+/// length of encryption public key
+pub const X25519_PUBLICKEYBYTES: usize =
+    crate::crypto_box::curve25519xsalsa20poly1305::PUBLICKEYBYTES;
+
+/// length of encryption secret key
+pub const X25519_SECRETKEYBYTES: usize =
+    crate::crypto_box::curve25519xsalsa20poly1305::SECRETKEYBYTES;
+
 /// length of sign secret key
 pub const SECRETKEYBYTES: usize =
     libsodium_sys::crypto_sign_SECRETKEYBYTES as usize;
@@ -186,9 +194,92 @@ where
     tokio_exec_blocking(exec_verify).await?
 }
 
+/// Convert a signing ed25519 public key into an encryption x25519 public key.
+/// Please understand the downsides of this function before making use of it.
+/// <https://doc.libsodium.org/advanced/ed25519-curve25519>
+pub fn ed25519_pk_to_curve25519<E, S>(
+    x25519_pk: E,
+    ed25519_pk: S,
+) -> SodokenResult<()>
+where
+    E: Into<BufWriteSized<X25519_PUBLICKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<PUBLICKEYBYTES>> + 'static + Send,
+{
+    let x25519_pk = x25519_pk.into();
+    let ed25519_pk = ed25519_pk.into();
+
+    let mut x25519_pk = x25519_pk.write_lock_sized();
+    let ed25519_pk = ed25519_pk.read_lock_sized();
+    safe::sodium::crypto_sign_ed25519_pk_to_curve25519(
+        &mut x25519_pk,
+        &ed25519_pk,
+    )
+}
+
+/// Convert a signing ed25519 secret key into an encryption x25519 secret key.
+/// Please understand the downsides of this function before making use of it.
+/// <https://doc.libsodium.org/advanced/ed25519-curve25519>
+pub fn ed25519_sk_to_curve25519<E, S>(
+    x25519_sk: E,
+    ed25519_sk: S,
+) -> SodokenResult<()>
+where
+    E: Into<BufWriteSized<X25519_SECRETKEYBYTES>> + 'static + Send,
+    S: Into<BufReadSized<SECRETKEYBYTES>> + 'static + Send,
+{
+    let x25519_sk = x25519_sk.into();
+    let ed25519_sk = ed25519_sk.into();
+
+    let mut x25519_sk = x25519_sk.write_lock_sized();
+    let ed25519_sk = ed25519_sk.read_lock_sized();
+    safe::sodium::crypto_sign_ed25519_sk_to_curve25519(
+        &mut x25519_sk,
+        &ed25519_sk,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn encrypt() {
+        let epk: BufWriteSized<{ sign::PUBLICKEYBYTES }> =
+            BufWriteSized::new_no_lock();
+        let esk: BufWriteSized<{ sign::SECRETKEYBYTES }> =
+            BufWriteSized::new_mem_locked().unwrap();
+        let xpk: BufWriteSized<{ sign::X25519_PUBLICKEYBYTES }> =
+            BufWriteSized::new_no_lock();
+        let xsk: BufWriteSized<{ sign::X25519_SECRETKEYBYTES }> =
+            BufWriteSized::new_mem_locked().unwrap();
+
+        sign::keypair(epk.clone(), esk.clone()).await.unwrap();
+        sign::ed25519_pk_to_curve25519(xpk.clone(), epk.clone()).unwrap();
+        sign::ed25519_sk_to_curve25519(xsk.clone(), esk.clone()).unwrap();
+
+        use crate::crypto_box::curve25519xsalsa20poly1305::*;
+
+        let nonce: BufReadSized<NONCEBYTES> =
+            BufReadSized::new_no_lock([0; NONCEBYTES]);
+        let msg = BufRead::new_no_lock(b"test message");
+
+        let cipher = easy(nonce.clone(), msg.clone(), xpk.clone(), xsk.clone())
+            .await
+            .unwrap();
+        let msg_len = cipher.read_lock().len() - MACBYTES;
+        let msg2 = BufWrite::new_no_lock(msg_len);
+        open_easy(
+            nonce.clone(),
+            msg2.clone(),
+            cipher.clone(),
+            xpk.clone(),
+            xsk.clone(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(&*msg.read_lock(), &*msg2.read_lock());
+    }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn sign() -> SodokenResult<()> {

@@ -455,6 +455,56 @@ pub(crate) fn crypto_sign_verify_detached(
     }
 }
 
+pub(crate) fn crypto_sign_ed25519_pk_to_curve25519(
+    x25519_pk: &mut [u8; libsodium_sys::crypto_scalarmult_curve25519_BYTES
+             as usize],
+    ed25519_pk: &[u8; libsodium_sys::crypto_sign_ed25519_PUBLICKEYBYTES
+         as usize],
+) -> SodokenResult<()> {
+    // ed25519_pk_to_curve25519 mainly fails from sizes checked above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - signature size - checked above
+    //   - pub_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_sign_ed25519_pk_to_curve25519(
+            raw_ptr_char!(x25519_pk),
+            raw_ptr_char_immut!(ed25519_pk),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenErrKind::InternalSodium.into())
+    }
+}
+
+pub(crate) fn crypto_sign_ed25519_sk_to_curve25519(
+    x25519_sk: &mut [u8; libsodium_sys::crypto_scalarmult_curve25519_BYTES
+             as usize],
+    ed25519_sk: &[u8; libsodium_sys::crypto_sign_ed25519_SECRETKEYBYTES
+         as usize],
+) -> SodokenResult<()> {
+    // ed25519_sk_to_curve25519 mainly fails from sizes checked above
+    //
+    // INVARIANTS:
+    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - signature size - checked above
+    //   - pub_key size - checked above
+    assert!(*SODIUM_INIT);
+    unsafe {
+        if libsodium_sys::crypto_sign_ed25519_sk_to_curve25519(
+            raw_ptr_char!(x25519_sk),
+            raw_ptr_char_immut!(ed25519_sk),
+        ) == 0_i32
+        {
+            return Ok(());
+        }
+        Err(SodokenErrKind::InternalSodium.into())
+    }
+}
+
 mod crypto_box;
 pub(crate) use crypto_box::*;
 
