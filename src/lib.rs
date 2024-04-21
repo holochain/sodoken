@@ -8,7 +8,7 @@
 //! [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 //! [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-use std::io::Result;
+use std::io::{Error, Result};
 
 pub(crate) fn sodium_init() {
     static I: std::sync::Once = std::sync::Once::new();
@@ -20,6 +20,7 @@ pub(crate) fn sodium_init() {
 }
 
 /// make invoking ffi functions more readable
+#[allow(unused_macros)]
 macro_rules! raw_ptr_void {
     ($name: ident) => {
         $name.as_mut_ptr() as *mut libc::c_void
@@ -41,6 +42,7 @@ macro_rules! raw_ptr_char_immut {
 }
 
 /// make invoking ffi functions more readable
+#[allow(unused_macros)]
 macro_rules! raw_ptr_ichar_immut {
     ($name: ident) => {
         $name.as_ptr() as *const libc::c_char
@@ -53,4 +55,6 @@ pub mod legacy;
 mod locked_mem;
 pub use locked_mem::*;
 
+pub mod kx;
 pub mod secretstream;
+pub mod sign;

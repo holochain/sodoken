@@ -1,12 +1,12 @@
 # sodoken Makefile
 
-.PHONY: all test static
+.PHONY: all static test
 
 SHELL = /usr/bin/env sh -eu
 
-all: test
+all: static test
 
-test: static
+test:
 	cargo build --all-targets --all-features
 	RUST_BACKTRACE=1 cargo test --all-features
 
