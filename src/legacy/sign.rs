@@ -6,18 +6,18 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! // we have a keypair
-//! let pk: sodoken::BufWriteSized<{ sodoken::sign::PUBLICKEYBYTES }> =
-//!     sodoken::BufWriteSized::new_no_lock();
-//! let sk: sodoken::BufWriteSized<{ sodoken::sign::SECRETKEYBYTES }> =
-//!     sodoken::BufWriteSized::new_mem_locked().unwrap();
-//! sodoken::sign::keypair(pk.clone(), sk.clone()).await.unwrap();
+//! let pk: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::PUBLICKEYBYTES }> =
+//!     sodoken::legacy::BufWriteSized::new_no_lock();
+//! let sk: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::SECRETKEYBYTES }> =
+//!     sodoken::legacy::BufWriteSized::new_mem_locked().unwrap();
+//! sodoken::legacy::sign::keypair(pk.clone(), sk.clone()).await.unwrap();
 //! let pk = pk.to_read_sized();
 //! let sk = sk.to_read_sized();
 //!
 //! // we can generate a signature
-//! let sig: sodoken::BufWriteSized<{ sodoken::sign::BYTES }> =
-//!     sodoken::BufWriteSized::new_no_lock();
-//! sodoken::sign::detached(
+//! let sig: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::BYTES }> =
+//!     sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::sign::detached(
 //!     sig.clone(),
 //!     b"test message".to_vec(),
 //!     sk,
@@ -25,7 +25,7 @@
 //! let sig = sig.to_read_sized();
 //!
 //! // we can validate the signature
-//! assert!(sodoken::sign::verify_detached(
+//! assert!(sodoken::legacy::sign::verify_detached(
 //!     sig,
 //!     b"test message".to_vec(),
 //!     pk,
@@ -33,7 +33,7 @@
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// length of sign seed
 pub const SEEDBYTES: usize = libsodium_sys::crypto_sign_SEEDBYTES as usize;
@@ -44,11 +44,11 @@ pub const PUBLICKEYBYTES: usize =
 
 /// length of encryption public key
 pub const X25519_PUBLICKEYBYTES: usize =
-    crate::crypto_box::curve25519xsalsa20poly1305::PUBLICKEYBYTES;
+    crypto_box::curve25519xsalsa20poly1305::PUBLICKEYBYTES;
 
 /// length of encryption secret key
 pub const X25519_SECRETKEYBYTES: usize =
-    crate::crypto_box::curve25519xsalsa20poly1305::SECRETKEYBYTES;
+    crypto_box::curve25519xsalsa20poly1305::SECRETKEYBYTES;
 
 /// length of sign secret key
 pub const SECRETKEYBYTES: usize =
@@ -240,7 +240,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn encrypt() {
@@ -257,7 +257,7 @@ mod tests {
         sign::ed25519_pk_to_curve25519(xpk.clone(), epk.clone()).unwrap();
         sign::ed25519_sk_to_curve25519(xsk.clone(), esk.clone()).unwrap();
 
-        use crate::crypto_box::curve25519xsalsa20poly1305::*;
+        use crypto_box::curve25519xsalsa20poly1305::*;
 
         let nonce: BufReadSized<NONCEBYTES> =
             BufReadSized::new_no_lock([0; NONCEBYTES]);

@@ -12,24 +12,24 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! // generate salt
-//! let salt = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::random::bytes_buf(salt.clone()).await.unwrap();
+//! let salt = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::random::bytes_buf(salt.clone()).await.unwrap();
 //! let salt = salt.to_read_sized();
 //!
 //! // generate the pw hash
-//! let hash = <sodoken::BufWriteSized<32>>::new_no_lock();
-//! sodoken::hash::argon2id::hash(
+//! let hash = <sodoken::legacy::BufWriteSized<32>>::new_no_lock();
+//! sodoken::legacy::hash::argon2id::hash(
 //!     hash.clone(),
 //!     b"my-passphrase".to_vec(),
 //!     salt.clone(),
-//!     sodoken::hash::argon2id::OPSLIMIT_MIN,
-//!     sodoken::hash::argon2id::MEMLIMIT_MIN,
+//!     sodoken::legacy::hash::argon2id::OPSLIMIT_MIN,
+//!     sodoken::legacy::hash::argon2id::MEMLIMIT_MIN,
 //! ).await.unwrap();
 //! let hash = hash.to_read_sized();
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// minimum hash length for argon2id pwhash
 pub const BYTES_MIN: usize =
@@ -49,39 +49,39 @@ pub const PASSWD_MAX: usize =
 
 /// argon2id pwhash min ops limit
 pub const OPSLIMIT_MIN: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u32;
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN;
 
 /// argon2id pwhash interactive ops limit
 pub const OPSLIMIT_INTERACTIVE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_INTERACTIVE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_INTERACTIVE;
 
 /// argon2id pwhash moderate ops limit
 pub const OPSLIMIT_MODERATE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MODERATE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MODERATE;
 
 /// argon2id pwhash sensitive ops limit
 pub const OPSLIMIT_SENSITIVE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_SENSITIVE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_SENSITIVE;
 
 /// argon2id pwhash max ops limit
 pub const OPSLIMIT_MAX: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u32;
+    libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX;
 
 /// argon2id pwhash min mem limit
 pub const MEMLIMIT_MIN: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as u32;
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN;
 
 /// argon2id pwhash interactive mem limit
 pub const MEMLIMIT_INTERACTIVE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_INTERACTIVE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_INTERACTIVE;
 
 /// argon2id pwhash moderate mem limit
 pub const MEMLIMIT_MODERATE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MODERATE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MODERATE;
 
 /// argon2id pwhash sensitive mem limit
 pub const MEMLIMIT_SENSITIVE: u32 =
-    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE as u32;
+    libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_SENSITIVE;
 
 /// argon2id13 password hashing scheme
 pub async fn hash<H, P, S>(
@@ -130,7 +130,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn argon2id() -> SodokenResult<()> {

@@ -5,14 +5,14 @@
 //! ```
 //! # #[tokio::main]
 //! # async fn main() {
-//! let salt: sodoken::BufWriteSized<{ sodoken::hash::argon2id::SALTBYTES }> =
-//!     sodoken::BufWriteSized::new_no_lock();
-//! sodoken::random::bytes_buf(salt.clone()).await.unwrap();
+//! let salt: sodoken::legacy::BufWriteSized<{ sodoken::legacy::hash::argon2id::SALTBYTES }> =
+//!     sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::random::bytes_buf(salt.clone()).await.unwrap();
 //! let salt = salt.to_read_sized();
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// Fill a buffer with cryptographically secure randomness
 pub async fn bytes_buf<B>(buf: B) -> SodokenResult<()>
@@ -55,7 +55,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
     //use std::sync::Arc;
 
     #[tokio::test(flavor = "multi_thread")]

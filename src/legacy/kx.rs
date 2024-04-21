@@ -6,19 +6,19 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! // server has a key pair
-//! let pk_srv = sodoken::BufWriteSized::new_no_lock();
-//! let sk_srv = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::kx::keypair(pk_srv.clone(), sk_srv.clone()).unwrap();
+//! let pk_srv = sodoken::legacy::BufWriteSized::new_no_lock();
+//! let sk_srv = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::kx::keypair(pk_srv.clone(), sk_srv.clone()).unwrap();
 //!
 //! // client has a keypair
-//! let pk_cli = sodoken::BufWriteSized::new_no_lock();
-//! let sk_cli = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::kx::keypair(pk_cli.clone(), sk_cli.clone()).unwrap();
+//! let pk_cli = sodoken::legacy::BufWriteSized::new_no_lock();
+//! let sk_cli = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::kx::keypair(pk_cli.clone(), sk_cli.clone()).unwrap();
 //!
 //! // client can perform a key exchange with just the server pk
-//! let cli_rx = sodoken::BufWriteSized::new_no_lock();
-//! let cli_tx = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::kx::client_session_keys(
+//! let cli_rx = sodoken::legacy::BufWriteSized::new_no_lock();
+//! let cli_tx = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::kx::client_session_keys(
 //!     cli_rx.clone(),
 //!     cli_tx.clone(),
 //!     pk_cli.clone(),
@@ -28,9 +28,9 @@
 //! .unwrap();
 //!
 //! // server can perform a key exchange with just the client pk
-//! let srv_rx = sodoken::BufWriteSized::new_no_lock();
-//! let srv_tx = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::kx::server_session_keys(
+//! let srv_rx = sodoken::legacy::BufWriteSized::new_no_lock();
+//! let srv_tx = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::kx::server_session_keys(
 //!     srv_rx.clone(),
 //!     srv_tx.clone(),
 //!     pk_srv.clone(),
@@ -45,7 +45,7 @@
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// Byte length of kx public key.
 pub const PUBLICKEYBYTES: usize =
@@ -140,7 +140,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_kx() -> SodokenResult<()> {

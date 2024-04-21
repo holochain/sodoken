@@ -1,23 +1,23 @@
 //! Api functions related to cryptographic secretbox encryption / decryption
-//! using the xchacha20poly1305 algorithm.
+//! using the xsalsa20poly1305 algorithm.
 //!
 //! See secretbox module-level documentation for usage examples.
 
-use crate::*;
+use crate::legacy::*;
 
 /// length of secretbox key
 pub const KEYBYTES: usize =
-    libsodium_sys::crypto_secretbox_xchacha20poly1305_KEYBYTES as usize;
+    libsodium_sys::crypto_secretbox_xsalsa20poly1305_KEYBYTES as usize;
 
 /// length of secretbox nonce
 pub const NONCEBYTES: usize =
-    libsodium_sys::crypto_secretbox_xchacha20poly1305_NONCEBYTES as usize;
+    libsodium_sys::crypto_secretbox_xsalsa20poly1305_NONCEBYTES as usize;
 
 /// length of secretbox mac
 pub const MACBYTES: usize =
-    libsodium_sys::crypto_secretbox_xchacha20poly1305_MACBYTES as usize;
+    libsodium_sys::crypto_secretbox_xsalsa20poly1305_MACBYTES as usize;
 
-/// encrypt data with crytpo_secretbox_xchacha20poly1305_easy
+/// encrypt data with crytpo_secretbox_xsalsa20poly1305_easy
 pub async fn easy<N, M, K>(
     nonce: N,
     message: M,
@@ -35,7 +35,7 @@ where
         let nonce = nonce.read_lock_sized();
         let message = message.read_lock();
         let shared_key = shared_key.read_lock_sized();
-        let cipher = safe::sodium::crypto_secretbox_xchacha20poly1305_easy(
+        let cipher = safe::sodium::crypto_secretbox_xsalsa20poly1305_easy(
             &nonce,
             &message,
             &shared_key,
@@ -45,7 +45,7 @@ where
     .await?
 }
 
-/// decrypt data with crypto_secretbox_xchacha20poly1305_open_easy
+/// decrypt data with crypto_secretbox_xsalsa20poly1305_open_easy
 pub async fn open_easy<N, M, C, K>(
     nonce: N,
     message: M,
@@ -67,7 +67,7 @@ where
         let mut message = message.write_lock();
         let cipher = cipher.read_lock();
         let shared_key = shared_key.read_lock_sized();
-        safe::sodium::crypto_secretbox_xchacha20poly1305_open_easy(
+        safe::sodium::crypto_secretbox_xsalsa20poly1305_open_easy(
             &nonce,
             &mut message,
             &cipher,
@@ -79,22 +79,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_secretbox() -> SodokenResult<()> {
-        let nonce: BufReadSized<{ secretbox::xchacha20poly1305::NONCEBYTES }> =
+        let nonce: BufReadSized<{ secretbox::xsalsa20poly1305::NONCEBYTES }> =
             BufReadSized::new_no_lock(
-                [0; secretbox::xchacha20poly1305::NONCEBYTES],
+                [0; secretbox::xsalsa20poly1305::NONCEBYTES],
             );
         let shared_key: BufWriteSized<
-            { secretbox::xchacha20poly1305::KEYBYTES },
+            { secretbox::xsalsa20poly1305::KEYBYTES },
         > = BufWriteSized::new_mem_locked()?;
         let msg = BufRead::new_no_lock(b"test message");
 
         random::bytes_buf(shared_key.clone()).await?;
 
-        let cipher = secretbox::xchacha20poly1305::easy(
+        let cipher = secretbox::xsalsa20poly1305::easy(
             nonce.clone(),
             msg.clone(),
             shared_key.clone(),
@@ -103,10 +103,10 @@ mod tests {
         assert_ne!(&*msg.read_lock(), &*cipher.read_lock());
 
         let msg_len =
-            cipher.read_lock().len() - secretbox::xchacha20poly1305::MACBYTES;
+            cipher.read_lock().len() - secretbox::xsalsa20poly1305::MACBYTES;
         let msg2 = BufWrite::new_no_lock(msg_len);
 
-        secretbox::xchacha20poly1305::open_easy(
+        secretbox::xsalsa20poly1305::open_easy(
             nonce.clone(),
             msg2.clone(),
             cipher.clone(),

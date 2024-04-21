@@ -2,7 +2,7 @@
 //! These buffer-related invocations are interrelated.
 //! Evaluate unsafe blocks in the context of all other calls in this module.
 
-use crate::*;
+use crate::legacy::*;
 use libc::c_void;
 
 #[derive(PartialEq)]
@@ -48,9 +48,9 @@ impl S3Buf {
         //   - can error if it cannot allocate
         //
         // INVARIANTS:
-        //   - sodium_init() was called (enforced by SODIUM_INIT)
+        //   - sodium_init() was called (enforced by sodium_init())
         //   - memory-aligned size
-        assert!(*SODIUM_INIT);
+        crate::sodium_init();
         let z = unsafe {
             // sodium_malloc requires memory-aligned sizes,
             // round up to the nearest 8 bytes.

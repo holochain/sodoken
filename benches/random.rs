@@ -11,9 +11,9 @@ static TOKIO: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .unwrap()
 });
 
-fn random(buf: sodoken::BufWrite) {
+fn random(buf: sodoken::legacy::BufWrite) {
     TOKIO.block_on(async move {
-        sodoken::random::bytes_buf(buf).await.unwrap();
+        sodoken::legacy::random::bytes_buf(buf).await.unwrap();
     });
 }
 
@@ -28,7 +28,7 @@ fn bench(c: &mut Criterion) {
             BenchmarkId::from_parameter(size),
             size,
             move |b, &size| {
-                let buf = sodoken::BufWrite::new_no_lock(size);
+                let buf = sodoken::legacy::BufWrite::new_no_lock(size);
                 b.iter(move || {
                     random(black_box(buf.clone()));
                 });

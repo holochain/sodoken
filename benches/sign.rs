@@ -12,41 +12,57 @@ static TOKIO: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 });
 
 fn keypair(
-    pk: sodoken::BufWriteSized<{ sodoken::sign::PUBLICKEYBYTES }>,
-    sk: sodoken::BufWriteSized<{ sodoken::sign::SECRETKEYBYTES }>,
+    pk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::PUBLICKEYBYTES },
+    >,
+    sk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::SECRETKEYBYTES },
+    >,
 ) {
     TOKIO.block_on(async move {
-        sodoken::sign::keypair(pk, sk).await.unwrap();
+        sodoken::legacy::sign::keypair(pk, sk).await.unwrap();
     });
 }
 
 fn seed_keypair(
-    pk: sodoken::BufWriteSized<{ sodoken::sign::PUBLICKEYBYTES }>,
-    sk: sodoken::BufWriteSized<{ sodoken::sign::SECRETKEYBYTES }>,
-    s: sodoken::BufWriteSized<{ sodoken::sign::SEEDBYTES }>,
+    pk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::PUBLICKEYBYTES },
+    >,
+    sk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::SECRETKEYBYTES },
+    >,
+    s: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::SEEDBYTES }>,
 ) {
     TOKIO.block_on(async move {
-        sodoken::sign::seed_keypair(pk, sk, s).await.unwrap();
+        sodoken::legacy::sign::seed_keypair(pk, sk, s)
+            .await
+            .unwrap();
     });
 }
 
 fn detached(
-    sig: sodoken::BufWriteSized<{ sodoken::sign::BYTES }>,
-    msg: sodoken::BufWrite,
-    sk: sodoken::BufWriteSized<{ sodoken::sign::SECRETKEYBYTES }>,
+    sig: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::BYTES }>,
+    msg: sodoken::legacy::BufWrite,
+    sk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::SECRETKEYBYTES },
+    >,
 ) {
     TOKIO.block_on(async move {
-        sodoken::sign::detached(sig, msg, sk).await.unwrap();
+        sodoken::legacy::sign::detached(sig, msg, sk).await.unwrap();
     });
 }
 
 fn verify_detached(
-    sig: sodoken::BufWriteSized<{ sodoken::sign::BYTES }>,
-    msg: sodoken::BufWrite,
-    pk: sodoken::BufWriteSized<{ sodoken::sign::PUBLICKEYBYTES }>,
+    sig: sodoken::legacy::BufWriteSized<{ sodoken::legacy::sign::BYTES }>,
+    msg: sodoken::legacy::BufWrite,
+    pk: sodoken::legacy::BufWriteSized<
+        { sodoken::legacy::sign::PUBLICKEYBYTES },
+    >,
 ) {
     TOKIO.block_on(async move {
-        sodoken::sign::verify_detached(sig, msg, pk).await.unwrap();
+        sodoken::legacy::sign::verify_detached(sig, msg, pk)
+            .await
+            .unwrap();
     });
 }
 
@@ -56,17 +72,17 @@ fn bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("keypair");
 
     group.bench_function("keypair", move |b| {
-        let pk = sodoken::BufWriteSized::new_no_lock();
-        let sk = sodoken::BufWriteSized::new_no_lock();
+        let pk = sodoken::legacy::BufWriteSized::new_no_lock();
+        let sk = sodoken::legacy::BufWriteSized::new_no_lock();
         b.iter(move || {
             keypair(black_box(pk.clone()), black_box(sk.clone()));
         });
     });
 
     group.bench_function("seed_keypair", move |b| {
-        let pk = sodoken::BufWriteSized::new_no_lock();
-        let sk = sodoken::BufWriteSized::new_no_lock();
-        let s = sodoken::BufWriteSized::new_no_lock();
+        let pk = sodoken::legacy::BufWriteSized::new_no_lock();
+        let sk = sodoken::legacy::BufWriteSized::new_no_lock();
+        let s = sodoken::legacy::BufWriteSized::new_no_lock();
         b.iter(move || {
             seed_keypair(
                 black_box(pk.clone()),
@@ -86,12 +102,13 @@ fn bench(c: &mut Criterion) {
             BenchmarkId::from_parameter(size),
             size,
             move |b, &size| {
-                let pk = sodoken::BufWriteSized::new_no_lock();
-                let sk = sodoken::BufWriteSized::new_no_lock();
-                let fut = sodoken::sign::keypair(pk.clone(), sk.clone());
+                let pk = sodoken::legacy::BufWriteSized::new_no_lock();
+                let sk = sodoken::legacy::BufWriteSized::new_no_lock();
+                let fut =
+                    sodoken::legacy::sign::keypair(pk.clone(), sk.clone());
                 TOKIO.block_on(fut).unwrap();
-                let msg = sodoken::BufWrite::new_no_lock(size);
-                let sig = sodoken::BufWriteSized::new_no_lock();
+                let msg = sodoken::legacy::BufWrite::new_no_lock(size);
+                let sig = sodoken::legacy::BufWriteSized::new_no_lock();
                 b.iter(move || {
                     detached(
                         black_box(sig.clone()),
@@ -112,13 +129,18 @@ fn bench(c: &mut Criterion) {
             BenchmarkId::from_parameter(size),
             size,
             move |b, &size| {
-                let pk = sodoken::BufWriteSized::new_no_lock();
-                let sk = sodoken::BufWriteSized::new_no_lock();
-                let fut = sodoken::sign::keypair(pk.clone(), sk.clone());
+                let pk = sodoken::legacy::BufWriteSized::new_no_lock();
+                let sk = sodoken::legacy::BufWriteSized::new_no_lock();
+                let fut =
+                    sodoken::legacy::sign::keypair(pk.clone(), sk.clone());
                 TOKIO.block_on(fut).unwrap();
-                let msg = sodoken::BufWrite::new_no_lock(size);
-                let sig = sodoken::BufWriteSized::new_no_lock();
-                let fut = sodoken::sign::detached(sig.clone(), msg.clone(), sk);
+                let msg = sodoken::legacy::BufWrite::new_no_lock(size);
+                let sig = sodoken::legacy::BufWriteSized::new_no_lock();
+                let fut = sodoken::legacy::sign::detached(
+                    sig.clone(),
+                    msg.clone(),
+                    sk,
+                );
                 TOKIO.block_on(fut).unwrap();
                 b.iter(move || {
                     verify_detached(

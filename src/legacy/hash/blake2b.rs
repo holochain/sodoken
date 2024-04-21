@@ -7,8 +7,8 @@
 //! ```
 //! # #[tokio::main]
 //! # async fn main() {
-//! let hash = <sodoken::BufWriteSized<32>>::new_no_lock();
-//! sodoken::hash::blake2b::hash(
+//! let hash = <sodoken::legacy::BufWriteSized<32>>::new_no_lock();
+//! sodoken::legacy::hash::blake2b::hash(
 //!     hash.clone(),
 //!     b"test-data".to_vec(),
 //! ).await.unwrap();
@@ -22,18 +22,18 @@
 //! ```
 //! # #[tokio::main]
 //! # async fn main() {
-//! let mut hasher = <sodoken::hash::blake2b::Blake2bHash<32>>::new().unwrap();
+//! let mut hasher = <sodoken::legacy::hash::blake2b::Blake2bHash<32>>::new().unwrap();
 //! hasher.update(b"test".to_vec()).await.unwrap();
 //! hasher.update(b"-".to_vec()).await.unwrap();
 //! hasher.update(b"data".to_vec()).await.unwrap();
-//! let hash = sodoken::BufWriteSized::new_no_lock();
+//! let hash = sodoken::legacy::BufWriteSized::new_no_lock();
 //! hasher.finish(hash.clone()).unwrap();
 //! let hash = hash.to_read_sized();
 //! assert_eq!(&[168, 70, 104, 97], &hash.read_lock()[..4]);
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// minimum generichash/blake2b output hash size
 pub const BYTES_MIN: usize =
@@ -214,7 +214,7 @@ impl<const N: usize> Blake2bHash<N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
     //use std::sync::Arc;
 
     #[tokio::test(flavor = "multi_thread")]

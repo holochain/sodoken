@@ -1,4 +1,4 @@
-use crate::*;
+use crate::legacy::*;
 use parking_lot::{
     Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };

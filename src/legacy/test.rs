@@ -1,4 +1,4 @@
-use crate::*;
+use crate::legacy::*;
 use std::sync::Arc;
 
 #[test]

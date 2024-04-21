@@ -18,9 +18,9 @@ publish: tools
 
 test: tools
 	cargo fmt -- --check
-	cargo clippy
-	RUST_BACKTRACE=1 cargo test --all-targets --no-run
-	RUST_BACKTRACE=1 cargo test
+	cargo clippy --all-features
+	RUST_BACKTRACE=1 cargo test --all-targets --all-features --no-run
+	RUST_BACKTRACE=1 cargo test --all-features
 	cargo readme -o README.md
 	@if [ "${CI}x" != "x" ]; then git diff --exit-code; fi
 
