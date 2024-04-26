@@ -103,7 +103,7 @@ pub fn verify_detached(
     signature: &[u8; SIGNATUREBYTES],
     message: &[u8],
     pub_key: &[u8; PUBLICKEYBYTES],
-) -> Result<bool> {
+) -> bool {
     // crypto_sign_verify_detached mainly failes from sized checked above
     //
     // INVARIANTS:
@@ -112,12 +112,12 @@ pub fn verify_detached(
     //   - pub_key size - checked above
     crate::sodium_init();
     unsafe {
-        Ok(libsodium_sys::crypto_sign_verify_detached(
+        libsodium_sys::crypto_sign_verify_detached(
             raw_ptr_char_immut!(signature),
             raw_ptr_char_immut!(message),
             message.len() as libc::c_ulonglong,
             raw_ptr_char_immut!(pub_key),
-        ) == 0_i32)
+        ) == 0_i32
     }
 }
 

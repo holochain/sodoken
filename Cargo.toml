@@ -27,6 +27,9 @@ tokio = { version = "1.37.0", features = ["sync", "rt"], optional = true }
 criterion = "0.5.1"
 tokio = { version = "1.37.0", features = ["full"] }
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = []
 
@@ -36,11 +39,14 @@ legacy = [ "dep:num_cpus", "dep:once_cell", "dep:one_err", "dep:parking_lot", "d
 [[bench]]
 name = "blake2b"
 harness = false
+required-features = [ "legacy" ]
 
 [[bench]]
 name = "random"
 harness = false
+required-features = [ "legacy" ]
 
 [[bench]]
 name = "sign"
 harness = false
+required-features = [ "legacy" ]

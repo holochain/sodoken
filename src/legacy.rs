@@ -1,5 +1,4 @@
-#![deny(missing_docs)]
-//! lib SOdium + haDOKEN = SODOKEN!
+//! `feature = "legacy"` Legacy async tokio sodoken interface.
 //!
 //! libsodium wrapper providing tokio safe memory secure api access.
 //!
