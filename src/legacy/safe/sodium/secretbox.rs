@@ -19,11 +19,11 @@ pub(crate) fn crypto_secretbox_xchacha20poly1305_easy(
     // crypto_secretbox_xchacha20poly1305_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - cipher size - calculated above
     //   - nonce size - checked above
     //   - shared_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         let mut cipher = Vec::with_capacity(cipher_len);
         cipher.set_len(cipher_len);
@@ -61,12 +61,12 @@ pub(crate) fn crypto_secretbox_xchacha20poly1305_open_easy(
     // crypto_secretbox_xchacha20poly1305_open_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - nonce size - checked above
     //   - shared_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_secretbox_xchacha20poly1305_open_easy(
             raw_ptr_char!(message),
@@ -114,11 +114,11 @@ pub(crate) fn crypto_secretbox_xsalsa20poly1305_easy(
     // crypto_secretbox_xsalsa20poly1305_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - cipher size - calculated above
     //   - nonce size - checked above
     //   - shared_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         let mut cipher = Vec::with_capacity(cipher_len);
         cipher.set_len(cipher_len);
@@ -156,12 +156,12 @@ pub(crate) fn crypto_secretbox_xsalsa20poly1305_open_easy(
     // crypto_secretbox_xsalsa20poly1305_open_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - nonce size - checked above
     //   - shared_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_secretbox_open_easy(
             raw_ptr_char!(message),

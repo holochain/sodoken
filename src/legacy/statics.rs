@@ -4,11 +4,6 @@ use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-pub(crate) static SODIUM_INIT: Lazy<bool> = Lazy::new(|| {
-    crate::safe::sodium::sodium_init().expect("can init libsodium");
-    true
-});
-
 pub(crate) static THREAD_LIMIT: Lazy<Arc<Semaphore>> = Lazy::new(|| {
     // as we're looking to provide fairly consistant experience on
     // potentially high-throughput workload, we try to balance
@@ -31,7 +26,9 @@ pub(crate) static THREAD_LIMIT: Lazy<Arc<Semaphore>> = Lazy::new(|| {
 });
 
 /// Executes `f` on the tokio blocking thread pool and awaits the result.
-pub(crate) async fn tokio_exec_blocking<T, F>(f: F) -> crate::SodokenResult<T>
+pub(crate) async fn tokio_exec_blocking<T, F>(
+    f: F,
+) -> crate::legacy::SodokenResult<T>
 where
     T: 'static + Send,
     F: 'static + Send + FnOnce() -> T,
@@ -39,5 +36,5 @@ where
     let _permit = THREAD_LIMIT.acquire().await.expect("semaphore cancelled");
     tokio::task::spawn_blocking(f)
         .await
-        .map_err(|_| crate::SodokenErrKind::SpawnBlocking.into())
+        .map_err(|_| crate::legacy::SodokenErrKind::SpawnBlocking.into())
 }

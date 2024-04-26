@@ -6,8 +6,8 @@
 //! # #[tokio::main]
 //! # async fn main() {
 //! let parent_key = [0; 32];
-//! let sub_key = sodoken::BufWrite::new_no_lock(32);
-//! sodoken::kdf::derive_from_key(
+//! let sub_key = sodoken::legacy::BufWrite::new_no_lock(32);
+//! sodoken::legacy::kdf::derive_from_key(
 //!     sub_key.clone(),
 //!     42,           // index
 //!     *b"CtxBytes", // context
@@ -17,7 +17,7 @@
 //! # }
 //! ```
 
-use crate::*;
+use crate::legacy::*;
 
 /// Byte length of kdf "context" parameter.
 pub const CONTEXTBYTES: usize = libsodium_sys::crypto_kdf_CONTEXTBYTES as usize;
@@ -51,7 +51,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_kdf() -> SodokenResult<()> {

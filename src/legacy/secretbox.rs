@@ -5,17 +5,17 @@
 //! ```
 //! # #[tokio::main]
 //! # async fn main() {
-//! use sodoken::secretbox::xsalsa20poly1305::*;
+//! use sodoken::legacy::secretbox::xsalsa20poly1305::*;
 //!
 //! // generate a shared secret
-//! let s_key = sodoken::BufWriteSized::new_mem_locked().unwrap();
-//! sodoken::random::bytes_buf(s_key.clone()).await.unwrap();
+//! let s_key = sodoken::legacy::BufWriteSized::new_mem_locked().unwrap();
+//! sodoken::legacy::random::bytes_buf(s_key.clone()).await.unwrap();
 //! let s_key = s_key.to_read_sized();
 //!
 //! // sender encrypts a message
 //! let msg = b"test-message".to_vec();
-//! let nonce = sodoken::BufWriteSized::new_no_lock();
-//! sodoken::random::bytes_buf(nonce.clone()).await.unwrap();
+//! let nonce = sodoken::legacy::BufWriteSized::new_no_lock();
+//! sodoken::legacy::random::bytes_buf(nonce.clone()).await.unwrap();
 //! let nonce = nonce.to_read_sized();
 //! let cipher = easy(
 //!     nonce.clone(),
@@ -25,7 +25,7 @@
 //!
 //! // receiver decrypts the message
 //! let msg_len = cipher.len() - MACBYTES;
-//! let msg = sodoken::BufWrite::new_no_lock(msg_len);
+//! let msg = sodoken::legacy::BufWrite::new_no_lock(msg_len);
 //! open_easy(
 //!     nonce,
 //!     msg.clone(),

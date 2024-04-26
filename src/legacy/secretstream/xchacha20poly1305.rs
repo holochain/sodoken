@@ -3,7 +3,7 @@
 //!
 //! See the secretstream module-level documentation for usage examples.
 
-use crate::*;
+use crate::legacy::*;
 
 /// Length of secretstream key.
 pub const KEYBYTES: usize =
@@ -294,7 +294,7 @@ impl SecretStreamDecrypt {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_secretstream() -> SodokenResult<()> {

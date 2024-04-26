@@ -3,7 +3,7 @@
 //!
 //! See crypto_box module-level documentation for usage examples.
 
-use crate::*;
+use crate::legacy::*;
 
 /// length of box seed
 pub const SEEDBYTES: usize = libsodium_sys::crypto_box_SEEDBYTES as usize;
@@ -203,7 +203,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::legacy::*;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_seal() -> SodokenResult<()> {

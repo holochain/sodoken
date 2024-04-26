@@ -1,49 +1,7 @@
 //! None of the unsafe blocks in here interdepend.
 //! The invariant lists for each unsafe block can be evaluated separately.
 
-use crate::*;
-
-/// make invoking ffi functions more readable
-macro_rules! raw_ptr_void {
-    ($name: ident) => {
-        $name.as_mut_ptr() as *mut libc::c_void
-    };
-}
-
-/// make invoking ffi functions more readable
-macro_rules! raw_ptr_char {
-    ($name: ident) => {
-        $name.as_mut_ptr() as *mut libc::c_uchar
-    };
-}
-
-/// make invoking ffi functions more readable
-macro_rules! raw_ptr_char_immut {
-    ($name: ident) => {
-        $name.as_ptr() as *const libc::c_uchar
-    };
-}
-
-/// make invoking ffi functions more readable
-macro_rules! raw_ptr_ichar_immut {
-    ($name: ident) => {
-        $name.as_ptr() as *const libc::c_char
-    };
-}
-
-pub(crate) fn sodium_init() -> SodokenResult<()> {
-    // sodium_init will return < 0 if an allocation / threading error occurs
-    // it will return > 0 if sodium_init() was already called,
-    // but this is ok/noop
-    //
-    // NO INVARIANTS
-    unsafe {
-        if libsodium_sys::sodium_init() > -1 {
-            return Ok(());
-        }
-    }
-    Err(SodokenErrKind::InternalSodium.into())
-}
+use crate::legacy::*;
 
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn randombytes_buf(buf: &mut [u8]) -> SodokenResult<()> {
@@ -51,8 +9,8 @@ pub(crate) fn randombytes_buf(buf: &mut [u8]) -> SodokenResult<()> {
     // allocated buffer - there are no error conditions possible here.
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         libsodium_sys::randombytes_buf(raw_ptr_void!(buf), buf.len());
         Ok(())
@@ -89,10 +47,10 @@ pub(crate) fn crypto_generichash(
     // we check sizes above for more detailed errors
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - hash size - checked above
     //   - key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_generichash(
             raw_ptr_char!(hash),
@@ -133,8 +91,8 @@ where
         libsodium_sys::crypto_generichash_state { opaque: [0; 384] };
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_generichash_init(
             &mut state, key, key_len, outlen,
@@ -151,8 +109,8 @@ pub(crate) fn crypto_generichash_update(
     message: &[u8],
 ) -> SodokenResult<()> {
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_generichash_update(
             state,
@@ -177,8 +135,8 @@ pub(crate) fn crypto_generichash_final(
     }
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_generichash_final(
             &mut state,
@@ -211,13 +169,17 @@ pub(crate) fn crypto_pwhash_argon2id(
         return Err(SodokenErrKind::BadPassphraseSize.into());
     }
 
-    if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN as u32
-        || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX as u32
+    // clippy doesn't like this:
+    //if ops_limit < libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN
+    //    || ops_limit > libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX
+    if !(libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MIN
+        ..=libsodium_sys::crypto_pwhash_argon2id_OPSLIMIT_MAX)
+        .contains(&ops_limit)
     {
         return Err(SodokenErrKind::BadOpsLimit.into());
     }
 
-    if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN as u32 {
+    if mem_limit < libsodium_sys::crypto_pwhash_argon2id_MEMLIMIT_MIN {
         return Err(SodokenErrKind::BadMemLimit.into());
     }
 
@@ -225,9 +187,9 @@ pub(crate) fn crypto_pwhash_argon2id(
     // we check sizes above for more detailed errors
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sizes - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_pwhash(
             raw_ptr_char!(hash),
@@ -261,14 +223,14 @@ pub(crate) fn crypto_kdf_derive_from_key(
     // crypto_sign_seed_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sub_key size - checked above
     //   - parent_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_kdf_derive_from_key(
             raw_ptr_char!(sub_key),
-            sub_key.len() as usize,
+            sub_key.len(),
             subkey_id,
             raw_ptr_ichar_immut!(ctx),
             raw_ptr_char_immut!(parent_key),
@@ -287,10 +249,10 @@ pub(crate) fn crypto_kx_keypair(
     // crypto_kx_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_kx_keypair(
             raw_ptr_char!(pub_key),
@@ -313,8 +275,8 @@ pub(crate) fn crypto_kx_client_session_keys(
     // crypto_kx_client_session_keys mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_kx_client_session_keys(
             raw_ptr_char!(rx),
@@ -340,8 +302,8 @@ pub(crate) fn crypto_kx_server_session_keys(
     // crypto_kx_client_session_keys mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_kx_server_session_keys(
             raw_ptr_char!(rx),
@@ -365,11 +327,11 @@ pub(crate) fn crypto_sign_seed_keypair(
     // crypto_sign_seed_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
     //   - seed size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_sign_seed_keypair(
             raw_ptr_char!(pub_key),
@@ -390,10 +352,10 @@ pub(crate) fn crypto_sign_keypair(
     // crypto_sign_seed_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_sign_keypair(
             raw_ptr_char!(pub_key),
@@ -414,10 +376,10 @@ pub(crate) fn crypto_sign_detached(
     // crypto_sign_detached mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - signature size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_sign_detached(
             raw_ptr_char!(signature),
@@ -441,10 +403,10 @@ pub(crate) fn crypto_sign_verify_detached(
     // crypto_sign_verify_detached mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - signature size - checked above
     //   - pub_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         Ok(libsodium_sys::crypto_sign_verify_detached(
             raw_ptr_char_immut!(signature),
@@ -464,10 +426,10 @@ pub(crate) fn crypto_sign_ed25519_pk_to_curve25519(
     // ed25519_pk_to_curve25519 mainly fails from sizes checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - signature size - checked above
     //   - pub_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_sign_ed25519_pk_to_curve25519(
             raw_ptr_char!(x25519_pk),
@@ -489,10 +451,10 @@ pub(crate) fn crypto_sign_ed25519_sk_to_curve25519(
     // ed25519_sk_to_curve25519 mainly fails from sizes checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - signature size - checked above
     //   - pub_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_sign_ed25519_sk_to_curve25519(
             raw_ptr_char!(x25519_sk),
@@ -511,7 +473,7 @@ pub(crate) use crypto_box::*;
 mod secretbox;
 pub(crate) use secretbox::*;
 
-use crate::secretstream::xchacha20poly1305::SecretStreamTag;
+use secretstream::xchacha20poly1305::SecretStreamTag;
 
 pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
     key: &[u8; libsodium_sys::crypto_secretstream_xchacha20poly1305_KEYBYTES
@@ -526,9 +488,9 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_init_push(
         };
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sizes enforced by type system
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     let res = unsafe {
         let mut header = header.extend_lock();
         let header = header.unsafe_extend_mut(
@@ -567,9 +529,9 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_push(
         + libsodium_sys::crypto_secretstream_xchacha20poly1305_ABYTES as usize;
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sizes enforced by type system
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     let res = unsafe {
         let mut cipher = cipher.extend_lock();
         let cipher = cipher.unsafe_extend_mut(cipher_len)?;
@@ -609,9 +571,9 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_init_pull(
         };
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sizes enforced by type system
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     let res = unsafe {
         libsodium_sys::crypto_secretstream_xchacha20poly1305_init_pull(
             &mut state,
@@ -646,9 +608,9 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_pull(
     };
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - sizes enforced by type system + msg_len calc above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     let res = unsafe {
         let mut message = message.extend_lock();
         let message = message.unsafe_extend_mut(msg_len)?;
@@ -685,8 +647,8 @@ pub(crate) fn crypto_secretstream_xchacha20poly1305_rekey(
     state: &mut libsodium_sys::crypto_secretstream_xchacha20poly1305_state,
 ) {
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
-    assert!(*SODIUM_INIT);
+    //   - sodium_init() was called (enforced by sodium_init())
+    crate::sodium_init();
     unsafe {
         libsodium_sys::crypto_secretstream_xchacha20poly1305_rekey(state);
     }

@@ -15,11 +15,11 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_seed_keypair(
     // crypto_box_curve25519xchacha20poly1305_seed_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
     //   - seed size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_curve25519xchacha20poly1305_seed_keypair(
             raw_ptr_char!(pub_key),
@@ -40,10 +40,10 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_keypair(
     // crypto_box_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_curve25519xchacha20poly1305_keypair(
             raw_ptr_char!(pub_key),
@@ -75,12 +75,12 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_easy(
     // crypto_box_curve25519xchacha20poly1305_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - cipher size - calculated above
     //   - nonce size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         let mut cipher = Vec::with_capacity(cipher_len);
         cipher.set_len(cipher_len);
@@ -124,13 +124,13 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_open_easy(
     // crypto_box_curve25519xchacha20poly1305_open_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - nonce size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_curve25519xchacha20poly1305_open_easy(
             raw_ptr_char!(message),
@@ -163,11 +163,11 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_seal(
     }
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - pub_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_curve25519xchacha20poly1305_seal(
             raw_ptr_char!(cipher),
@@ -201,12 +201,12 @@ pub(crate) fn crypto_box_curve25519xchacha20poly1305_seal_open(
     }
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_curve25519xchacha20poly1305_seal_open(
             raw_ptr_char!(message),
@@ -247,11 +247,11 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seed_keypair(
     // crypto_box_seed_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
     //   - seed size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_seed_keypair(
             raw_ptr_char!(pub_key),
@@ -272,10 +272,10 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_keypair(
     // crypto_box_keypair mainly fails from sizes enforced above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_keypair(
             raw_ptr_char!(pub_key),
@@ -300,12 +300,12 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_easy(
     // crypto_box_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - cipher size - calculated above
     //   - nonce size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         let mut cipher = Vec::with_capacity(cipher_len);
         cipher.set_len(cipher_len);
@@ -341,13 +341,13 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_open_easy(
     // crypto_box_open_easy mainly failes from sized checked above
     //
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - nonce size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_open_easy(
             raw_ptr_char!(message),
@@ -376,11 +376,11 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seal(
     }
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - pub_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_seal(
             raw_ptr_char!(cipher),
@@ -408,12 +408,12 @@ pub(crate) fn crypto_box_curve25519xsalsa20poly1305_seal_open(
     }
 
     // INVARIANTS:
-    //   - sodium_init() was called (enforced by SODIUM_INIT)
+    //   - sodium_init() was called (enforced by sodium_init())
     //   - message size - checked above
     //   - cipher size - checked above
     //   - pub_key size - checked above
     //   - sec_key size - checked above
-    assert!(*SODIUM_INIT);
+    crate::sodium_init();
     unsafe {
         if libsodium_sys::crypto_box_seal_open(
             raw_ptr_char!(message),
