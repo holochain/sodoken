@@ -11,8 +11,6 @@
 //! [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 //!
 //! ```
-//! # #[tokio::main(flavor = "multi_thread")]
-//! # async fn main() {
 //! use sodoken::*;
 //!
 //! let mut pub_key = [0; sign::PUBLICKEYBYTES];
@@ -25,7 +23,6 @@
 //! sign::sign_detached(&mut sig, b"hello", &sec_key.lock()).unwrap();
 //! assert!(sign::verify_detached(&sig, b"hello", &pub_key));
 //! assert!(!sign::verify_detached(&sig, b"world", &pub_key));
-//! # }
 //! ```
 
 use std::io::{Error, Result};
