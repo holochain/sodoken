@@ -13,4 +13,6 @@ test:
 static:
 	cargo fmt -- --check
 	cargo clippy --all-features -- -Dwarnings
+	cargo install cargo-rdme
+	cargo rdme --force
 	@if [ "${CI}x" != "x" ]; then git diff --exit-code; fi
