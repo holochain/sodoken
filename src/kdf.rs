@@ -1,4 +1,18 @@
-//! Libsodium crypto_kx types and functions.
+//! Api functions related to cryptographically secure key derivation.
+//!
+//! #### Example Key Derivation
+//!
+//! ```
+//! let parent_key = [0xdb; 32];
+//! let mut sub_key = [0; 16];
+//! sodoken::kdf::derive_from_key(
+//!     &mut sub_key,
+//!     42,          // index
+//!     b"CtxBytes", // context
+//!     &parent_key,
+//! ).unwrap();
+//! assert_eq!(&[148, 55, 118, 11], &sub_key[..4]);
+//! ```
 
 use crate::*;
 

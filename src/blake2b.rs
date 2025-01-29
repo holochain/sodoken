@@ -1,4 +1,33 @@
-//! Libsodium crypto_kx types and functions.
+//! Api functions related to the blake2b generichash algorithm.
+//!
+//! Blake2b is a fast generic hashing algorithm.
+//!
+//! #### Example if you have all the data ahead of time:
+//!
+//! ```
+//! let mut hash = [0; 16];
+//! sodoken::blake2b::blake2b_hash(
+//!     &mut hash,
+//!     b"test-data",
+//!     Some(&[0xdb; 32]), // optional key
+//! ).unwrap();
+//! assert_eq!(&[43, 81, 6, 91], &hash[..4]);
+//! ```
+//!
+//! #### Stream hashing example:
+//!
+//! ```
+//! let mut hasher = sodoken::blake2b::Blake2bHash::new(
+//!     16,                // hash size
+//!     Some(&[0xdb; 32]), // optional key
+//! ).unwrap();
+//! hasher.update(b"test").unwrap();
+//! hasher.update(b"-").unwrap();
+//! hasher.update(b"data").unwrap();
+//! let mut hash = [0; 16];
+//! hasher.finish(&mut hash).unwrap();
+//! assert_eq!(&[43, 81, 6, 91], &hash[..4]);
+//! ```
 
 use crate::*;
 

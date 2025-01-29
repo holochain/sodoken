@@ -1,4 +1,33 @@
-//! Libsodium crypto_kx types and functions.
+//! Api functions related to the argon2id password hashing algorithm.
+//!
+//! Argon2 is a password hashing scheme designed to be both cpu and
+//! memory hard. You can configure this hardness with the `ops_limit`
+//! for how difficult it is cpu-wise, and `mem_limit` for how much
+//! memory it will use during the operation. For tests, please use
+//! `MIN`, otherwise your tests will take a long time.
+//!
+//! #### Example
+//!
+//! ```
+//! // generate salt
+//! let salt = [0xdb; sodoken::argon2::ARGON2_ID_SALTBYTES];
+//! // you should actually use a random salt:
+//! // sodoken::random::randombytes_buf(&mut salt).unwrap();
+//!
+//! // generate the pw hash
+//! let mut hash = <sodoken::LockedArray<16>>::new().unwrap();
+//! sodoken::argon2::blocking_argon2id(
+//!     &mut *hash.lock(),
+//!     b"my-passphrase",
+//!     &salt,
+//!     // don't use MIN except for CI/testing
+//!     sodoken::argon2::ARGON2_ID_OPSLIMIT_MIN,
+//!     // don't use MIN except for CI/testing
+//!     sodoken::argon2::ARGON2_ID_MEMLIMIT_MIN,
+//! ).unwrap();
+//!
+//! assert_eq!(&[207, 43, 248, 128], &hash.lock()[..4]);
+//! ```
 
 use crate::*;
 
