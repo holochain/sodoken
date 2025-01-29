@@ -66,12 +66,15 @@ macro_rules! raw_ptr_ichar_immut {
     };
 }
 
-#[cfg(feature = "legacy")]
-pub mod legacy;
-
 mod locked_mem;
 pub use locked_mem::*;
 
+pub mod argon2;
+pub mod blake2b;
+pub mod crypto_box;
+pub mod kdf;
 pub mod kx;
+pub mod random;
+pub mod secretbox;
 pub mod secretstream;
 pub mod sign;
