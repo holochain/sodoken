@@ -60,7 +60,7 @@ pub const ARGON2_ID_MEMLIMIT_SENSITIVE: u32 =
 pub fn blocking_argon2id(
     hash: &mut [u8],
     passphrase: &[u8],
-    salt: &[u8; ARGON2_ID_SALTBYTES as usize],
+    salt: &[u8; ARGON2_ID_SALTBYTES],
     ops_limit: u32,
     mem_limit: u32,
 ) -> Result<()> {

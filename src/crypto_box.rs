@@ -110,6 +110,7 @@ pub fn xsalsa_easy(
     //   - pub_key size - checked above
     //   - sec_key size - checked above
     crate::sodium_init();
+    #[allow(clippy::uninit_vec)]
     unsafe {
         let mut cipher = Vec::with_capacity(cipher_len);
         cipher.set_len(cipher_len);
