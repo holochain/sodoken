@@ -1,4 +1,56 @@
-//! Libsodium crypto_secretstream_xchacha20poly1305 types and functions.
+//! Modules related to secret stream encryption / decryption.
+//!
+//! #### Example
+//!
+//! ```
+//! // both sides have a secret key
+//! let mut key = sodoken::LockedArray::new().unwrap();
+//! sodoken::random::randombytes_buf(&mut *key.lock()).unwrap();
+//!
+//! // -- encryption side -- //
+//!
+//! // initialize the stream
+//! let mut enc = sodoken::secretstream::State::default();
+//! let mut header = [0; sodoken::secretstream::HEADERBYTES];
+//! sodoken::secretstream::init_push(&mut enc, &mut header, &key.lock())
+//!     .unwrap();
+//!
+//! // .. push any number of messages here .. //
+//!
+//! // push a final message
+//! let msg = b"test-message";
+//! let mut cipher = vec![0; msg.len() + sodoken::secretstream::ABYTES];
+//! sodoken::secretstream::push(
+//!     &mut enc,
+//!     &mut cipher,
+//!     msg,
+//!     Some(b"test-adata"),
+//!     sodoken::secretstream::Tag::Final,
+//! ).unwrap();
+//!
+//! // -- decryption side -- //
+//!
+//! // initialize the stream
+//! let mut dec = sodoken::secretstream::State::default();
+//! sodoken::secretstream::init_pull(&mut dec, &header, &key.lock()).unwrap();
+//!
+//! // .. read any number of messages here .. //
+//!
+//! // read the final message
+//! let mut msg = vec![0; cipher.len() - sodoken::secretstream::ABYTES];
+//! let tag = sodoken::secretstream::pull(
+//!     &mut dec,
+//!     &mut msg,
+//!     &cipher,
+//!     Some(b"test-adata"),
+//! ).unwrap();
+//!
+//! assert_eq!(sodoken::secretstream::Tag::Final, tag);
+//! assert_eq!(
+//!     "test-message",
+//!     String::from_utf8_lossy(&msg),
+//! );
+//! ```
 
 use crate::*;
 
@@ -75,10 +127,10 @@ pub fn init_push(
 /// Encrypt a secretstream message.
 pub fn push(
     state: &mut State,
+    cipher: &mut [u8],
     message: &[u8],
     adata: Option<&[u8]>,
     tag: Tag,
-    cipher: &mut [u8],
 ) -> Result<()> {
     let (adata_len, adata) = match adata {
         Some(adata) => {
@@ -274,10 +326,10 @@ mod test {
         let mut cipher = vec![0; secretstream::ABYTES + message.len()];
         secretstream::push(
             &mut sstate,
+            &mut cipher,
             message,
             None,
             secretstream::Tag::Message,
-            &mut cipher,
         )
         .unwrap();
 

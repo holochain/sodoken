@@ -1,4 +1,71 @@
-//! Libsodium crypto_kx types and functions.
+//! Modules related to cryptographic box encryption / decryption.
+//!
+//! #### Example Sealed Box Encryption / Decryption
+//!
+//! ```
+//! // recipient has a keypair
+//! let mut pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
+//! let mut sk = sodoken::LockedArray::new().unwrap();
+//! sodoken::crypto_box::xsalsa_keypair(&mut pk, &mut sk.lock()).unwrap();
+//!
+//! // sender encrypts a message using receiver pub key
+//! let msg = b"test-message".to_vec();
+//! let mut cipher = vec![0; msg.len() + sodoken::crypto_box::XSALSA_SEALBYTES];
+//! sodoken::crypto_box::xsalsa_seal(&mut cipher, &msg, &pk).unwrap();
+//!
+//! // recipient can decrypt the message
+//! let mut msg = vec![0; cipher.len() - sodoken::crypto_box::XSALSA_SEALBYTES];
+//! sodoken::crypto_box::xsalsa_seal_open(&mut msg, &cipher, &pk, &sk.lock())
+//!     .unwrap();
+//!
+//! assert_eq!(
+//!     "test-message",
+//!     String::from_utf8_lossy(&msg),
+//! );
+//! ```
+//!
+//! #### Example Box Encryption / Decryption
+//!
+//! ```
+//! // recipient has a keypair
+//! let mut r_pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
+//! let mut r_sk = sodoken::LockedArray::new().unwrap();
+//! sodoken::crypto_box::xsalsa_keypair(&mut r_pk, &mut r_sk.lock()).unwrap();
+//!
+//! // sender has a keypair
+//! let mut s_pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
+//! let mut s_sk = sodoken::LockedArray::new().unwrap();
+//! sodoken::crypto_box::xsalsa_keypair(&mut s_pk, &mut s_sk.lock()).unwrap();
+//!
+//! // sender encrypts a message
+//! let msg = b"test-message".to_vec();
+//! let mut nonce = [0; sodoken::crypto_box::XSALSA_NONCEBYTES];
+//! sodoken::random::randombytes_buf(&mut nonce).unwrap();
+//! let mut cipher = vec![0; msg.len() + sodoken::crypto_box::XSALSA_MACBYTES];
+//! sodoken::crypto_box::xsalsa_easy(
+//!     &mut cipher,
+//!     &msg,
+//!     &nonce,
+//!     &r_pk,
+//!     &s_sk.lock(),
+//! ).unwrap();
+//!
+//! // receiver decrypts the message
+//! let msg_len = cipher.len() - sodoken::crypto_box::XSALSA_MACBYTES;
+//! let mut msg = vec![0; msg_len];
+//! sodoken::crypto_box::xsalsa_open_easy(
+//!     &mut msg,
+//!     &cipher,
+//!     &nonce,
+//!     &s_pk,
+//!     &r_sk.lock(),
+//! ).unwrap();
+//!
+//! assert_eq!(
+//!     "test-message",
+//!     String::from_utf8_lossy(&msg),
+//! );
+//! ```
 
 use crate::*;
 
@@ -93,13 +160,18 @@ pub fn xsalsa_keypair(
 
 /// encrypt data with box_curve25519xsalsa20poly1305_easy
 pub fn xsalsa_easy(
-    nonce: &[u8; libsodium_sys::crypto_box_NONCEBYTES as usize],
+    cipher: &mut [u8],
     message: &[u8],
+    nonce: &[u8; libsodium_sys::crypto_box_NONCEBYTES as usize],
     dest_pub_key: &[u8; libsodium_sys::crypto_box_PUBLICKEYBYTES as usize],
     src_sec_key: &[u8; libsodium_sys::crypto_box_SECRETKEYBYTES as usize],
-) -> Result<Vec<u8>> {
+) -> Result<()> {
     let cipher_len =
         message.len() + libsodium_sys::crypto_box_MACBYTES as usize;
+
+    if cipher.len() != cipher_len {
+        return Err(Error::other("bad cipher size"));
+    }
 
     // crypto_box_easy mainly failes from sized checked above
     //
@@ -112,9 +184,6 @@ pub fn xsalsa_easy(
     crate::sodium_init();
     #[allow(clippy::uninit_vec)]
     unsafe {
-        let mut cipher = Vec::with_capacity(cipher_len);
-        cipher.set_len(cipher_len);
-
         if libsodium_sys::crypto_box_easy(
             raw_ptr_char!(cipher),
             raw_ptr_char_immut!(message),
@@ -124,7 +193,7 @@ pub fn xsalsa_easy(
             raw_ptr_char_immut!(src_sec_key),
         ) == 0_i32
         {
-            return Ok(cipher);
+            return Ok(());
         }
         Err(Error::other("internal"))
     }
@@ -132,9 +201,9 @@ pub fn xsalsa_easy(
 
 /// decrypt data with box_curve25519xsalsa20poly1305_open_easy
 pub fn xsalsa_open_easy(
-    nonce: &[u8; libsodium_sys::crypto_box_NONCEBYTES as usize],
     message: &mut [u8],
     cipher: &[u8],
+    nonce: &[u8; libsodium_sys::crypto_box_NONCEBYTES as usize],
     src_pub_key: &[u8; libsodium_sys::crypto_box_PUBLICKEYBYTES as usize],
     dest_sec_key: &[u8; libsodium_sys::crypto_box_SECRETKEYBYTES as usize],
 ) -> Result<()> {

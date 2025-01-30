@@ -1,4 +1,39 @@
-//! Libsodium crypto_kx types and functions.
+//! Modules related to cryptographic secretbox encryption / decryption.
+//!
+//! #### Example SecretBox Encryption / Decryption
+//!
+//! ```
+//! // generate a shared secret
+//! let mut s_key = sodoken::LockedArray::new().unwrap();
+//! sodoken::random::randombytes_buf(&mut *s_key.lock()).unwrap();
+//!
+//! // sender encrypts a message
+//! let msg = b"test-message".to_vec();
+//! let mut nonce = [0; sodoken::secretbox::XSALSA_NONCEBYTES];
+//! sodoken::random::randombytes_buf(&mut nonce).unwrap();
+//! let mut cipher = vec![0; msg.len() + sodoken::secretbox::XSALSA_MACBYTES];
+//! sodoken::secretbox::xsalsa_easy(
+//!     &mut cipher,
+//!     &nonce,
+//!     &msg,
+//!     &s_key.lock(),
+//! ).unwrap();
+//!
+//! // receiver decrypts the message
+//! let msg_len = cipher.len() - sodoken::secretbox::XSALSA_MACBYTES;
+//! let mut msg = vec![0; msg_len];
+//! sodoken::secretbox::xsalsa_open_easy(
+//!     &mut msg,
+//!     &cipher,
+//!     &nonce,
+//!     &s_key.lock(),
+//! ).unwrap();
+//!
+//! assert_eq!(
+//!     "test-message",
+//!     String::from_utf8_lossy(&msg),
+//! );
+//! ```
 
 use crate::*;
 
@@ -32,15 +67,20 @@ mod tests {
 
 /// encrypt data with crytpo_secretbox_xsalsa20poly1305_easy
 pub fn xsalsa_easy(
+    cipher: &mut [u8],
     nonce: &[u8; libsodium_sys::crypto_secretbox_xsalsa20poly1305_NONCEBYTES
          as usize],
     message: &[u8],
     shared_key: &[u8;
          libsodium_sys::crypto_secretbox_xsalsa20poly1305_KEYBYTES
              as usize],
-) -> Result<Vec<u8>> {
+) -> Result<()> {
     let cipher_len = message.len()
         + libsodium_sys::crypto_secretbox_xsalsa20poly1305_MACBYTES as usize;
+
+    if cipher.len() != cipher_len {
+        return Err(Error::other("bad cipher size"));
+    }
 
     // crypto_secretbox_xsalsa20poly1305_easy mainly failes from sized checked above
     //
@@ -52,9 +92,6 @@ pub fn xsalsa_easy(
     crate::sodium_init();
     #[allow(clippy::uninit_vec)]
     unsafe {
-        let mut cipher = Vec::with_capacity(cipher_len);
-        cipher.set_len(cipher_len);
-
         if libsodium_sys::crypto_secretbox_easy(
             raw_ptr_char!(cipher),
             raw_ptr_char_immut!(message),
@@ -63,7 +100,7 @@ pub fn xsalsa_easy(
             raw_ptr_char_immut!(shared_key),
         ) == 0_i32
         {
-            Ok(cipher)
+            Ok(())
         } else {
             Err(Error::other("internal"))
         }
@@ -72,10 +109,10 @@ pub fn xsalsa_easy(
 
 /// decrypt data with crypto_secretbox_xsalsa20poly1305_open_easy
 pub fn xsalsa_open_easy(
-    nonce: &[u8; libsodium_sys::crypto_secretbox_xsalsa20poly1305_NONCEBYTES
-         as usize],
     message: &mut [u8],
     cipher: &[u8],
+    nonce: &[u8; libsodium_sys::crypto_secretbox_xsalsa20poly1305_NONCEBYTES
+         as usize],
     shared_key: &[u8;
          libsodium_sys::crypto_secretbox_xsalsa20poly1305_KEYBYTES
              as usize],
