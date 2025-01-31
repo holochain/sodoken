@@ -1,4 +1,28 @@
-//! Libsodium crypto_sign types and functions.
+//! Api functions related to cryptographic signatures and verification.
+//!
+//! #### Example
+//!
+//! ```
+//! // we have a keypair
+//! let mut pk = [0; sodoken::sign::PUBLICKEYBYTES];
+//! let mut sk = sodoken::LockedArray::new().unwrap();
+//! sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap();
+//!
+//! // we can generate a signature
+//! let mut sig = [0; sodoken::sign::SIGNATUREBYTES];
+//! sodoken::sign::sign_detached(
+//!     &mut sig,
+//!     b"test message",
+//!     &sk.lock(),
+//! ).unwrap();
+//!
+//! // we can validate the signature
+//! assert!(sodoken::sign::verify_detached(
+//!     &sig,
+//!     b"test message",
+//!     &pk,
+//! ));
+//! ```
 
 use crate::*;
 

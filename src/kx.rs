@@ -1,4 +1,48 @@
-//! Libsodium crypto_kx types and functions.
+//! Api functions related to cryptographically secure key exchange.
+//!
+//! #### Example Key Derivation
+//!
+//! ```
+//! // server has a key pair
+//! let mut pk_srv = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
+//! let mut sk_srv = sodoken::LockedArray::new().unwrap();
+//! sodoken::crypto_box::xsalsa_keypair(&mut pk_srv, &mut sk_srv.lock())
+//!     .unwrap();
+//!
+//! // client has a keypair
+//! let mut pk_cli = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
+//! let mut sk_cli = sodoken::LockedArray::new().unwrap();
+//! sodoken::crypto_box::xsalsa_keypair(&mut pk_cli, &mut sk_cli.lock())
+//!     .unwrap();
+//!
+//! // client can perform a key exchange with just the server pk
+//! let mut cli_rx = sodoken::LockedArray::new().unwrap();
+//! let mut cli_tx = sodoken::LockedArray::new().unwrap();
+//! sodoken::kx::client_session_keys(
+//!     &mut cli_rx.lock(),
+//!     &mut cli_tx.lock(),
+//!     &pk_cli,
+//!     &sk_cli.lock(),
+//!     &pk_srv,
+//! )
+//! .unwrap();
+//!
+//! // server can perform a key exchange with just the client pk
+//! let mut srv_rx = sodoken::LockedArray::new().unwrap();
+//! let mut srv_tx = sodoken::LockedArray::new().unwrap();
+//! sodoken::kx::server_session_keys(
+//!     &mut srv_rx.lock(),
+//!     &mut srv_tx.lock(),
+//!     &pk_srv,
+//!     &sk_srv.lock(),
+//!     &pk_cli,
+//! )
+//! .unwrap();
+//!
+//! // both sides have the same keys
+//! assert_eq!(&*cli_rx.lock(), &*srv_tx.lock());
+//! assert_eq!(&*cli_tx.lock(), &*srv_rx.lock());
+//! ```
 
 use crate::*;
 

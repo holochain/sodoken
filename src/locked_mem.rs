@@ -58,7 +58,7 @@ impl<'g, const N: usize> LockedArrayGuard<'g, N> {
     }
 }
 
-impl<'g, const N: usize> Drop for LockedArrayGuard<'g, N> {
+impl<const N: usize> Drop for LockedArrayGuard<'_, N> {
     fn drop(&mut self) {
         unsafe {
             libsodium_sys::sodium_mprotect_noaccess(self.0 .0);
@@ -66,7 +66,7 @@ impl<'g, const N: usize> Drop for LockedArrayGuard<'g, N> {
     }
 }
 
-impl<'g, const N: usize> std::ops::Deref for LockedArrayGuard<'g, N> {
+impl<const N: usize> std::ops::Deref for LockedArrayGuard<'_, N> {
     type Target = [u8; N];
 
     fn deref(&self) -> &Self::Target {
@@ -77,7 +77,7 @@ impl<'g, const N: usize> std::ops::Deref for LockedArrayGuard<'g, N> {
     }
 }
 
-impl<'g, const N: usize> std::ops::DerefMut for LockedArrayGuard<'g, N> {
+impl<const N: usize> std::ops::DerefMut for LockedArrayGuard<'_, N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe {
             &mut *(std::slice::from_raw_parts_mut(self.0 .0 as *mut u8, N)[..N]
