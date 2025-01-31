@@ -92,21 +92,6 @@ pub const XSALSA_NONCEBYTES: usize =
 pub const XSALSA_SEALBYTES: usize =
     libsodium_sys::crypto_box_SEALBYTES as usize;
 
-#[cfg(test)]
-mod tests {
-    // make sure the default `crypto_box_*` are xsalsa
-    // crypto_box_curve25519xsalsa20poly1305_* doesn't include _easy...
-    #[test]
-    fn test_crypto_box_assert_default_salsa() {
-        let default_box_primitive = unsafe {
-            let c =
-                std::ffi::CStr::from_ptr(libsodium_sys::crypto_box_primitive());
-            c.to_str().unwrap()
-        };
-        assert_eq!("curve25519xsalsa20poly1305", default_box_primitive);
-    }
-}
-
 /// create a box curve25519xsalsa20poly1305 keypair from a private seed
 pub fn xsalsa_seed_keypair(
     pub_key: &mut [u8; libsodium_sys::crypto_box_PUBLICKEYBYTES as usize],
@@ -304,5 +289,20 @@ pub fn xsalsa_seal_open(
             return Ok(());
         }
         Err(Error::other("internal"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // make sure the default `crypto_box_*` are xsalsa
+    // crypto_box_curve25519xsalsa20poly1305_* doesn't include _easy...
+    #[test]
+    fn test_crypto_box_assert_default_salsa() {
+        let default_box_primitive = unsafe {
+            let c =
+                std::ffi::CStr::from_ptr(libsodium_sys::crypto_box_primitive());
+            c.to_str().unwrap()
+        };
+        assert_eq!("curve25519xsalsa20poly1305", default_box_primitive);
     }
 }

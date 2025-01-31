@@ -49,22 +49,6 @@ pub const XSALSA_NONCEBYTES: usize =
 pub const XSALSA_MACBYTES: usize =
     libsodium_sys::crypto_secretbox_xsalsa20poly1305_MACBYTES as usize;
 
-#[cfg(test)]
-mod tests {
-    // make sure the default `crypto_secretbox_*` are xsalsa
-    // crypto_secretbox_xsalsa20poly1305_* doesn't include _easy...
-    #[test]
-    fn test_crypto_secretbox_assert_default_salsa() {
-        let default_box_primitive = unsafe {
-            let c = std::ffi::CStr::from_ptr(
-                libsodium_sys::crypto_secretbox_primitive(),
-            );
-            c.to_str().unwrap()
-        };
-        assert_eq!("xsalsa20poly1305", default_box_primitive);
-    }
-}
-
 /// encrypt data with crytpo_secretbox_xsalsa20poly1305_easy
 pub fn xsalsa_easy(
     cipher: &mut [u8],
@@ -146,5 +130,21 @@ pub fn xsalsa_open_easy(
         } else {
             Err(Error::other("internal"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // make sure the default `crypto_secretbox_*` are xsalsa
+    // crypto_secretbox_xsalsa20poly1305_* doesn't include _easy...
+    #[test]
+    fn test_crypto_secretbox_assert_default_salsa() {
+        let default_box_primitive = unsafe {
+            let c = std::ffi::CStr::from_ptr(
+                libsodium_sys::crypto_secretbox_primitive(),
+            );
+            c.to_str().unwrap()
+        };
+        assert_eq!("xsalsa20poly1305", default_box_primitive);
     }
 }
