@@ -46,6 +46,14 @@ impl LockedArray {
     }
 }
 
+impl From<Vec<u8>> for LockedArray {
+    fn from(s: Vec<u8>) -> Self {
+        let mut out = Self::new(s.len()).unwrap();
+        out.lock().copy_from_slice(s.as_slice());
+        out
+    }
+}
+
 /// Locked memory that is unlocked for access.
 pub struct LockedArrayGuard<'g>(&'g mut LockedArray);
 
