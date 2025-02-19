@@ -14,7 +14,7 @@
 //! use sodoken::*;
 //!
 //! let mut pub_key = [0; sign::PUBLICKEYBYTES];
-//! let mut sec_key = LockedArray::new().unwrap();
+//! let mut sec_key = SizedLockedArray::new().unwrap();
 //!
 //! sign::keypair(&mut pub_key, &mut sec_key.lock()).unwrap();
 //!

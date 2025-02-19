@@ -5,7 +5,7 @@
 //! ```
 //! // recipient has a keypair
 //! let mut pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
-//! let mut sk = sodoken::LockedArray::new().unwrap();
+//! let mut sk = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::crypto_box::xsalsa_keypair(&mut pk, &mut sk.lock()).unwrap();
 //!
 //! // sender encrypts a message using receiver pub key
@@ -29,12 +29,12 @@
 //! ```
 //! // recipient has a keypair
 //! let mut r_pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
-//! let mut r_sk = sodoken::LockedArray::new().unwrap();
+//! let mut r_sk = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::crypto_box::xsalsa_keypair(&mut r_pk, &mut r_sk.lock()).unwrap();
 //!
 //! // sender has a keypair
 //! let mut s_pk = [0; sodoken::crypto_box::XSALSA_PUBLICKEYBYTES];
-//! let mut s_sk = sodoken::LockedArray::new().unwrap();
+//! let mut s_sk = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::crypto_box::xsalsa_keypair(&mut s_pk, &mut s_sk.lock()).unwrap();
 //!
 //! // sender encrypts a message

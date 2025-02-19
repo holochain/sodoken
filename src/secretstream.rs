@@ -4,7 +4,7 @@
 //!
 //! ```
 //! // both sides have a secret key
-//! let mut key = sodoken::LockedArray::new().unwrap();
+//! let mut key = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::random::randombytes_buf(&mut *key.lock()).unwrap();
 //!
 //! // -- encryption side -- //
@@ -272,25 +272,25 @@ mod test {
     #[test]
     fn secretstream() {
         let mut p1 = [0; sign::PUBLICKEYBYTES];
-        let mut s1 = LockedArray::new().unwrap();
+        let mut s1 = SizedLockedArray::new().unwrap();
         sign::keypair(&mut p1, &mut s1.lock()).unwrap();
 
         let mut xp1 = [0; kx::PUBLICKEYBYTES];
-        let mut xs1 = LockedArray::new().unwrap();
+        let mut xs1 = SizedLockedArray::new().unwrap();
         sign::pk_to_curve25519(&mut xp1, &p1).unwrap();
         sign::sk_to_curve25519(&mut xs1.lock(), &s1.lock()).unwrap();
 
         let mut p2 = [0; sign::PUBLICKEYBYTES];
-        let mut s2 = LockedArray::new().unwrap();
+        let mut s2 = SizedLockedArray::new().unwrap();
         sign::keypair(&mut p2, &mut s2.lock()).unwrap();
 
         let mut xp2 = [0; kx::PUBLICKEYBYTES];
-        let mut xs2 = LockedArray::new().unwrap();
+        let mut xs2 = SizedLockedArray::new().unwrap();
         sign::pk_to_curve25519(&mut xp2, &p2).unwrap();
         sign::sk_to_curve25519(&mut xs2.lock(), &s2.lock()).unwrap();
 
-        let mut srx = LockedArray::new().unwrap();
-        let mut stx = LockedArray::new().unwrap();
+        let mut srx = SizedLockedArray::new().unwrap();
+        let mut stx = SizedLockedArray::new().unwrap();
         kx::server_session_keys(
             &mut srx.lock(),
             &mut stx.lock(),
@@ -300,8 +300,8 @@ mod test {
         )
         .unwrap();
 
-        let mut crx = LockedArray::new().unwrap();
-        let mut ctx = LockedArray::new().unwrap();
+        let mut crx = SizedLockedArray::new().unwrap();
+        let mut ctx = SizedLockedArray::new().unwrap();
         kx::client_session_keys(
             &mut crx.lock(),
             &mut ctx.lock(),
