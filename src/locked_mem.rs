@@ -54,6 +54,14 @@ impl From<Vec<u8>> for LockedArray {
     }
 }
 
+impl From<Box<[u8]>> for LockedArray {
+    fn from(value: Box<[u8]>) -> Self {
+        let mut out = Self::new(value.len()).unwrap();
+        out.lock().copy_from_slice(value.as_ref());
+        out
+    }
+}
+
 /// Locked memory that is unlocked for access.
 pub struct LockedArrayGuard<'g>(&'g mut LockedArray);
 
@@ -100,21 +108,21 @@ impl<const N: usize> SizedLockedArray<N> {
     }
 
     /// Get access to this memory.
-    pub fn lock(&mut self) -> LockedArrayGuardSized<'_, N> {
-        LockedArrayGuardSized::new(self)
+    pub fn lock(&mut self) -> SizedLockedArrayGuard<'_, N> {
+        SizedLockedArrayGuard::new(self)
     }
 }
 
 /// Locked memory that is unlocked for access.
-pub struct LockedArrayGuardSized<'g, const N: usize>(LockedArrayGuard<'g>);
+pub struct SizedLockedArrayGuard<'g, const N: usize>(LockedArrayGuard<'g>);
 
-impl<'g, const N: usize> LockedArrayGuardSized<'g, N> {
+impl<'g, const N: usize> SizedLockedArrayGuard<'g, N> {
     fn new(l: &'g mut SizedLockedArray<N>) -> Self {
         Self(l.0.lock())
     }
 }
 
-impl<const N: usize> std::ops::Deref for LockedArrayGuardSized<'_, N> {
+impl<const N: usize> std::ops::Deref for SizedLockedArrayGuard<'_, N> {
     type Target = [u8; N];
 
     fn deref(&self) -> &Self::Target {
@@ -125,7 +133,7 @@ impl<const N: usize> std::ops::Deref for LockedArrayGuardSized<'_, N> {
     }
 }
 
-impl<const N: usize> std::ops::DerefMut for LockedArrayGuardSized<'_, N> {
+impl<const N: usize> std::ops::DerefMut for SizedLockedArrayGuard<'_, N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe {
             &mut *(std::slice::from_raw_parts_mut(self.0 .0 .1 as *mut u8, N)
