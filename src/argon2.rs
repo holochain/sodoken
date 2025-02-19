@@ -15,7 +15,7 @@
 //! // sodoken::random::randombytes_buf(&mut salt).unwrap();
 //!
 //! // generate the pw hash
-//! let mut hash = <sodoken::LockedArray<16>>::new().unwrap();
+//! let mut hash = <sodoken::SizedLockedArray<16>>::new().unwrap();
 //! sodoken::argon2::blocking_argon2id(
 //!     &mut *hash.lock(),
 //!     b"my-passphrase",

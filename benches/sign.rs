@@ -10,7 +10,7 @@ fn bench(c: &mut Criterion) {
 
     group.bench_function("keypair", move |b| {
         let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
-        let mut sk = sodoken::LockedArray::new().unwrap();
+        let mut sk = sodoken::SizedLockedArray::new().unwrap();
         b.iter(move || {
             black_box(sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap());
         });
@@ -18,7 +18,7 @@ fn bench(c: &mut Criterion) {
 
     group.bench_function("seed_keypair", move |b| {
         let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
-        let mut sk = sodoken::LockedArray::new().unwrap();
+        let mut sk = sodoken::SizedLockedArray::new().unwrap();
         b.iter(move || {
             black_box(
                 sodoken::sign::seed_keypair(
@@ -42,7 +42,7 @@ fn bench(c: &mut Criterion) {
             move |b, &size| {
                 let msg = vec![0xdb; size];
                 let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
-                let mut sk = sodoken::LockedArray::new().unwrap();
+                let mut sk = sodoken::SizedLockedArray::new().unwrap();
                 sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap();
                 let mut sig = [0_u8; sodoken::sign::SIGNATUREBYTES];
                 b.iter(move || {
@@ -69,7 +69,7 @@ fn bench(c: &mut Criterion) {
             move |b, &size| {
                 let msg = vec![0xdb; size];
                 let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
-                let mut sk = sodoken::LockedArray::new().unwrap();
+                let mut sk = sodoken::SizedLockedArray::new().unwrap();
                 sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap();
                 let mut sig = [0_u8; sodoken::sign::SIGNATUREBYTES];
                 sodoken::sign::sign_detached(&mut sig, &msg, &sk.lock())

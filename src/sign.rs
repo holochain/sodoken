@@ -5,7 +5,7 @@
 //! ```
 //! // we have a keypair
 //! let mut pk = [0; sodoken::sign::PUBLICKEYBYTES];
-//! let mut sk = sodoken::LockedArray::new().unwrap();
+//! let mut sk = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap();
 //!
 //! // we can generate a signature

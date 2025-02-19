@@ -4,7 +4,7 @@
 //!
 //! ```
 //! // generate a shared secret
-//! let mut s_key = sodoken::LockedArray::new().unwrap();
+//! let mut s_key = sodoken::SizedLockedArray::new().unwrap();
 //! sodoken::random::randombytes_buf(&mut *s_key.lock()).unwrap();
 //!
 //! // sender encrypts a message
