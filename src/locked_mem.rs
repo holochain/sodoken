@@ -47,17 +47,25 @@ impl LockedArray {
 }
 
 impl From<Vec<u8>> for LockedArray {
-    fn from(s: Vec<u8>) -> Self {
+    fn from(mut s: Vec<u8>) -> Self {
         let mut out = Self::new(s.len()).unwrap();
         out.lock().copy_from_slice(s.as_slice());
+
+        // clear the input buffer
+        s.fill(0);
+
         out
     }
 }
 
 impl From<Box<[u8]>> for LockedArray {
-    fn from(value: Box<[u8]>) -> Self {
+    fn from(mut value: Box<[u8]>) -> Self {
         let mut out = Self::new(value.len()).unwrap();
         out.lock().copy_from_slice(value.as_ref());
+
+        // clear the input buffer
+        value.fill(0);
+
         out
     }
 }
@@ -181,5 +189,38 @@ mod tests {
         call_me_mut(&mut *locked.lock());
 
         assert_eq!(8, call_me(&*locked.lock()));
+    }
+
+    #[test]
+    fn clears_input_buffer_from_vec() {
+        let mut input = vec![1, 2, 3];
+        input.resize(3, 0);
+
+        let ptr = input.as_ptr();
+
+        let mut locked = LockedArray::from(input);
+
+        let vec = unsafe { Vec::from_raw_parts(ptr as *mut u8, 3, 3) };
+
+        assert_eq!(vec, vec![0, 0, 0]);
+        std::mem::forget(vec);
+
+        assert_eq!(&*locked.lock(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn clears_input_buffer_from_box() {
+        let input: Box<[u8]> = vec![1, 2, 3].into();
+
+        let ptr = input.as_ptr();
+
+        let mut locked = LockedArray::from(input);
+
+        let vec = unsafe { Box::from_raw(ptr as *mut [u8; 3]) };
+
+        assert_eq!(vec, Box::new([0, 0, 0]));
+        std::mem::forget(vec);
+
+        assert_eq!(&*locked.lock(), &[1, 2, 3]);
     }
 }
