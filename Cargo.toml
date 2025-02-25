@@ -15,6 +15,7 @@ resolver = "2"
 [dependencies]
 libc = "0.2.169"
 libsodium-sys = { version = "1.22.2", package = "libsodium-sys-stable" }
+zeroize = "1.8.1"
 
 [dev-dependencies]
 criterion = "0.5.1"
