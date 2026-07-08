@@ -1,6 +1,5 @@
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
-    Throughput,
+    BenchmarkId, Criterion, Throughput, criterion_group, criterion_main,
 };
 
 fn bench(c: &mut Criterion) {
@@ -12,7 +11,9 @@ fn bench(c: &mut Criterion) {
         let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
         let mut sk = sodoken::SizedLockedArray::new().unwrap();
         b.iter(move || {
-            black_box(sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap());
+            std::hint::black_box(
+                sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap(),
+            );
         });
     });
 
@@ -20,7 +21,7 @@ fn bench(c: &mut Criterion) {
         let mut pk = [0_u8; sodoken::sign::PUBLICKEYBYTES];
         let mut sk = sodoken::SizedLockedArray::new().unwrap();
         b.iter(move || {
-            black_box(
+            std::hint::black_box(
                 sodoken::sign::seed_keypair(
                     &mut pk,
                     &mut sk.lock(),
@@ -46,7 +47,7 @@ fn bench(c: &mut Criterion) {
                 sodoken::sign::keypair(&mut pk, &mut sk.lock()).unwrap();
                 let mut sig = [0_u8; sodoken::sign::SIGNATUREBYTES];
                 b.iter(move || {
-                    black_box(
+                    std::hint::black_box(
                         sodoken::sign::sign_detached(
                             &mut sig,
                             &msg,
@@ -75,9 +76,9 @@ fn bench(c: &mut Criterion) {
                 sodoken::sign::sign_detached(&mut sig, &msg, &sk.lock())
                     .unwrap();
                 b.iter(move || {
-                    black_box(assert!(sodoken::sign::verify_detached(
-                        &sig, &msg, &pk
-                    )));
+                    std::hint::black_box(assert!(
+                        sodoken::sign::verify_detached(&sig, &msg, &pk)
+                    ));
                 });
             },
         );
