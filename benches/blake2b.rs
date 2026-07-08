@@ -1,6 +1,5 @@
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
-    Throughput,
+    BenchmarkId, Criterion, Throughput, criterion_group, criterion_main,
 };
 
 fn bench(c: &mut Criterion) {
@@ -16,7 +15,7 @@ fn bench(c: &mut Criterion) {
                 let mut hash = vec![0; sodoken::blake2b::BYTES_MIN];
                 let data = vec![0xdb; size];
                 b.iter(move || {
-                    black_box(
+                    std::hint::black_box(
                         sodoken::blake2b::blake2b_hash(&mut hash, &data, None)
                             .unwrap(),
                     );

@@ -19,7 +19,7 @@ jobs:
         ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Rust Toolchain
         run: |
@@ -31,13 +31,12 @@ jobs:
 
       - name: Install vcpkg Packages
         if: matrix.os == 'windows-latest'
-        uses: johnwason/vcpkg-action@v6
+        uses: johnwason/vcpkg-action@v8
         id: vcpkg
         with:
           pkgs: libsodium
           triplet: x64-windows-release
           token: ${{ github.token }}
-          github-binarycache: true
 
       - name: Make Test Windows
         if: matrix.os == 'windows-latest'

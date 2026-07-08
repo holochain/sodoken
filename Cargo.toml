@@ -2,7 +2,7 @@
 name = "sodoken"
 version = "0.1.0"
 authors = ["Holochain Core Dev Team <devcore@holochain.org>"]
-edition = "2021"
+edition = "2024"
 description = "libsodium wrapper providing tokio safe memory secure api access."
 keywords = [ "holochain", "holo", "nacl", "libsodium", "cryptography" ]
 categories = [ "cryptography" ]
@@ -18,7 +18,7 @@ libsodium-sys = { version = "1.22.2", package = "libsodium-sys-stable" }
 zeroize = "1.8.1"
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = "0.8.2"
 
 [package.metadata.docs.rs]
 all-features = true

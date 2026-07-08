@@ -1,6 +1,5 @@
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
-    Throughput,
+    BenchmarkId, Criterion, Throughput, criterion_group, criterion_main,
 };
 
 fn bench(c: &mut Criterion) {
@@ -15,7 +14,7 @@ fn bench(c: &mut Criterion) {
             move |b, &size| {
                 let mut buf = vec![0; size];
                 b.iter(move || {
-                    black_box(
+                    std::hint::black_box(
                         sodoken::random::randombytes_buf(&mut buf).unwrap(),
                     );
                 });
