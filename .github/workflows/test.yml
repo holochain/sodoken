@@ -51,9 +51,9 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: make test
 
-  ci-pass:
+  ci_pass:
     if: ${{ always() }}
-    name: "All Jobs Pass"
+    name: "ci_pass"
     runs-on: "ubuntu-latest"
     needs:
       - test
