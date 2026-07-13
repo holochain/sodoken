@@ -185,22 +185,4 @@ mod tests {
 
         assert_eq!(8, call_me(&*locked.lock()));
     }
-
-    // This test relies on being able to read back memory that has been unallocated.
-    // If this breaks, it may be best to remove it.
-    #[test]
-    fn clears_input_buffer_from_box() {
-        let input: Box<[u8]> = vec![1, 2, 3].into();
-
-        let ptr = input.as_ptr();
-
-        let mut locked = LockedArray::from(input);
-
-        let vec = unsafe { Box::from_raw(ptr as *mut [u8; 3]) };
-
-        assert_eq!(vec, Box::new([0, 0, 0]));
-        std::mem::forget(vec);
-
-        assert_eq!(&*locked.lock(), &[1, 2, 3]);
-    }
 }
