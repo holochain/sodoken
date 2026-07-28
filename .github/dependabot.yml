@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: weekly
     groups:
-      background:
+      updates:
         applies-to: version-updates
         patterns:
           - "*"
@@ -15,7 +15,7 @@ updates:
     schedule:
       interval: weekly
     groups:
-      background:
+      cargo-minor-patch:
         applies-to: version-updates
         patterns:
           - "*"
